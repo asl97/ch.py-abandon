@@ -1,28 +1,44 @@
 ch.py
 =====
-Distributed under the terms of the GNU GPL. 
+Distributed under the terms of the GNU AGPL 3
 
-  An event-based library for connecting to one or more Chatango chat rooms. Has support 
-for several things including: messaging, message font, name colour, deleting, banning, recent 
-history, two userlist modes, flagging, avoiding flood bans, and detecting flags.
+Backward compatible is not GUARANTEE, anything and everything can break at anytime.
 
-Recommended release for single core: [1.3.5](https://github.com/Nullspeaker/ch.py/releases/tag/v1.3.5)
+NOTE: there will be NO python2 support, it been more than 5 years since it was release.
 
-WARNING: 1.3.5a and newer have some backward incompatible changes with 1.3.5 and older.
+####messages from maintainers:
 
 ----
-  I would like to note that I am not the original author, but merely the current maintainer.
-The previous holder (pun unintended) unexpectedly dropped from his/her position without transferring
-it and I just happened to be the one of the few who tried to pick up the pieces. ~~~~ nullspeaker
+
+#####ASL97:
+I might not be able to stop people from stealing it or making them give the source of this library with their edits when they use it for their bots.
+
+But i can and will not provide support for people who doesn't follow the license of this library by not linking to their copy of the library in their reports.
 
 ----
-  Feature requests and bug reports should be directed to the issues page of the repository on Github. Please tag with the appropriate labels when doing so, as well. Contributions can be made by submitting a pull request that I or others can then merge. Link to the repository's page is at the bottom of this README. Email me (Nullspeaker) personally if you would like to request ability to merge your own commits to master without direct approval.
+
+Bug reports should be directed to the issues page of the repository on Github.
+
+Feature requests aren't recommended and will most likely get close
+Submitting pull requests to add a feature is ok
+
+NOTE: If you are making a Bug report or Support request. You must ether provide the commit for the version of the library you are using or
+paste it on a site like bpaste if you have edited it and link it
+
+If anything seem off about the report/request like line number being off in an error report, the issue WILL be close.
 
 ----
-http://nullspeaker.github.io/ch.py/
-No documentation supplied, as there is no apparent demand for such.
 
-----
-Former Major Contributor(s)
+Original GPL3 library available at https://github.com/Nullspeaker/ch.py
 
-[asl97](https://github.com/asl97)
+Maintainers:
+* asl97 `<asl97@outlook.com>`
+* aqua101
+
+Contributors:
+* Nullspeaker <import codecs;codecs.encode('aunzzbaq129@tznvy.pbz','rot_13')>
+* pystub
+* dani87
+* domzy
+* kamijoutouma
+* piks
