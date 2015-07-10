@@ -251,9 +251,8 @@ class _ANON_PM_OBJECT:
       if debug:
         print("unknown data: "+str(data))
 
-  def _getManager(self): return self._mgr
-
-  mgr = property(_getManager)
+  @property
+  def mgr(self): return self._mgr
 
   ####
   # Received Commands
@@ -470,13 +469,12 @@ class PM:
   ####
   # Properties
   ####
-  def _getManager(self): return self._mgr
-  def _getContacts(self): return self._contacts
-  def _getBlocklist(self): return self._blocklist
-
-  mgr = property(_getManager)
-  contacts = property(_getContacts)
-  blocklist = property(_getBlocklist)
+  @property
+  def mgr(self): return self._mgr
+  @property
+  def contacts(self): return self._contacts
+  @property
+  def blocklist(self): return self._blocklist
 
   ####
   # Received Commands
@@ -763,17 +761,22 @@ class Room:
   ####
   # Properties
   ####
-  def _getName(self): return self._name
-  def _getBotName(self):
+  @property
+  def name(self): return self._name
+  @property
+  def botName(self):
     if self.mgr.name and self.mgr.password:
       return self.mgr.name
     elif self.mgr.name and self.mgr.password == None:
       return "#" + self.mgr.name
     elif self.mgr.name == None:
       return self._botname
-  def _getCurrentname(self): return self._currentname
-  def _getManager(self): return self._mgr
-  def _getUserlist(self, mode = None, unique = None, memory = None):
+  @property
+  def currentName(self): return self._currentname
+  @property
+  def mgr(self): return self._mgr
+  @property
+  def userList(self, mode = None, unique = None, memory = None):
     ul = None
     if mode == None: mode = self.mgr._userlistMode
     if unique == None: unique = self.mgr._userlistUnique
@@ -786,41 +789,36 @@ class Room:
       return list(set(ul))
     else:
       return ul
-  def _getUserNames(self):
+  @property
+  def usernames(self):
     ul = self.userlist
     return list(map(lambda x: x.name, ul))
-  def _getUser(self): return self.mgr.user
-  def _getOwner(self): return self._owner
-  def _getOwnerName(self): return self._owner.name
-  def _getMods(self):
+  @property
+  def user(self): return self.mgr.user
+  @property
+  def owner(self): return self._owner
+  @property
+  def ownerName(self): return self._owner.name
+  @property
+  def mods(self):
     newset = set()
     for mod in self._mods:
       newset.add(mod)
     return newset
-  def _getModNames(self):
+  @property
+  def modNames(self):
     mods = self._getMods()
     return [x.name for x in mods]
-  def _getUserCount(self): return self._userCount
-  def _getSilent(self): return self._silent
-  def _setSilent(self, val): self._silent = val
-  def _getBanlist(self): return list(self._banlist.keys())
-  def _getUnBanlist(self): return [[record["target"], record["src"]] for record in self._unbanlist.values()]
-
-  name = property(_getName)
-  botname = property(_getBotName)
-  currentname = property(_getCurrentname)
-  mgr = property(_getManager)
-  userlist = property(_getUserlist)
-  usernames = property(_getUserNames)
-  user = property(_getUser)
-  owner = property(_getOwner)
-  ownername = property(_getOwnerName)
-  mods = property(_getMods)
-  modnames = property(_getModNames)
-  usercount = property(_getUserCount)
-  silent = property(_getSilent, _setSilent)
-  banlist = property(_getBanlist)
-  unbanlist = property(_getUnBanlist)
+  @property
+  def userCount(self): return self._userCount
+  @property
+  def silent(self): return self._silent
+  @silent.setter
+  def silent(self, val): self._silent = val
+  @property
+  def banList(self): return list(self._banlist.keys())
+  @property
+  def unBanList(self): return [[record["target"], record["src"]] for record in self._unbanlist.values()]
 
   ####
   # Feed/process
@@ -1567,19 +1565,18 @@ class RoomManager:
   ####
   # Properties
   ####
-  def _getUser(self): return User(self._name)
-  def _getName(self): return self._name
-  def _getPassword(self): return self._password
-  def _getRooms(self): return set(self._rooms.values())
-  def _getRoomNames(self): return set(self._rooms.keys())
-  def _getPM(self): return self._pm
-
-  user = property(_getUser)
-  name = property(_getName)
-  password = property(_getPassword)
-  rooms = property(_getRooms)
-  roomnames = property(_getRoomNames)
-  pm = property(_getPM)
+  @property
+  def user(self): return User(self._name)
+  @property
+  def name(self): return self._name
+  @property
+  def password(self): return self._password
+  @property
+  def rooms(self): return set(self._rooms.values())
+  @property
+  def roomNames(self): return set(self._rooms.keys())
+  @property
+  def pm(self): return self._pm
 
   ####
   # Virtual methods
@@ -2254,29 +2251,28 @@ class _User:
   ####
   # Properties
   ####
-  def _getName(self): return self._name
-  def _getPuid(self): return self._puid
-  def _getSessionIds(self, room = None):
+  @property
+  def name(self): return self._name
+  @property
+  def puid(self): return self._puid
+  @property
+  def sessionids(self, room = None):
     if room:
       return self._sids.get(room, set())
     else:
       return set.union(*self._sids.values())
-  def _getRooms(self): return self._sids.keys()
-  def _getRoomNames(self): return [room.name for room in self._getRooms()]
-  def _getFontColor(self): return self._fontColor
-  def _getFontFace(self): return self._fontFace
-  def _getFontSize(self): return self._fontSize
-  def _getNameColor(self): return self._nameColor
-
-  name = property(_getName)
-  puid = property(_getPuid)
-  sessionids = property(_getSessionIds)
-  rooms = property(_getRooms)
-  roomnames = property(_getRoomNames)
-  fontColor = property(_getFontColor)
-  fontFace = property(_getFontFace)
-  fontSize = property(_getFontSize)
-  nameColor = property(_getNameColor)
+  @property
+  def rooms(self): return self._sids.keys()
+  @property
+  def roomNames(self): return [room.name for room in self._getRooms()]
+  @property
+  def fontColor(self): return self._fontColor
+  @property
+  def fontFace(self): return self._fontFace
+  @property
+  def fontSize(self): return self._fontSize
+  @property
+  def nameColor(self): return self._nameColor
 
   ####
   # Util
@@ -2371,28 +2367,27 @@ class Message:
   ####
   # Properties
   ####
-  def _getId(self): return self._msgid
-  def _getTime(self): return self._time
-  def _getUser(self): return self._user
-  def _getBody(self): return self._body
-  def _getIP(self): return self._ip
-  def _getFontColor(self): return self._fontColor
-  def _getFontFace(self): return self._fontFace
-  def _getFontSize(self): return self._fontSize
-  def _getNameColor(self): return self._nameColor
-  def _getRoom(self): return self._room
-  def _getRaw(self): return self._raw
-  def _getUnid(self): return self._unid
-
-  msgid = property(_getId)
-  time = property(_getTime)
-  user = property(_getUser)
-  body = property(_getBody)
-  room = property(_getRoom)
-  ip = property(_getIP)
-  fontColor = property(_getFontColor)
-  fontFace = property(_getFontFace)
-  fontSize = property(_getFontSize)
-  raw = property(_getRaw)
-  nameColor = property(_getNameColor)
-  unid = property(_getUnid)
+  @property
+  def msgid(self): return self._msgid
+  @property
+  def time(self): return self._time
+  @property
+  def user(self): return self._user
+  @property
+  def body(self): return self._body
+  @property
+  def ip(self): return self._ip
+  @property
+  def fontColor(self): return self._fontColor
+  @property
+  def fontFace(self): return self._fontFace
+  @property
+  def fontSize(self): return self._fontSize
+  @property
+  def nameColor(self): return self._nameColor
+  @property
+  def room(self): return self._room
+  @property
+  def raw(self): return self._raw
+  @property
+  def unid(self): return self._unid
