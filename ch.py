@@ -41,8 +41,6 @@ Userlist_All = 1
 BigMessage_Multiple = 0
 BigMessage_Cut = 1
 
-# minimum of 1 thread needed
-Number_of_Threads = 1
 ################################################################
 # Struct class
 ################################################################
@@ -1497,7 +1495,6 @@ class RoomManager:
     self._tasks = set()
     self._rooms = dict()
     self._rooms_queue = queue.Queue()
-    self._rooms_lock = threading.Lock()
     if pm:
       if self._password:
         self._pm = self._PM(mgr = self)
@@ -1506,17 +1503,10 @@ class RoomManager:
     else:
       self._pm = None
 
-  def _joinThread(self):
-    while True:
-      room = self._rooms_queue.get()
-      with self._rooms_lock:
-        con = self._Room(room, mgr = self)
-        self._rooms[room] = con
-
   ####
   # Join/leave
   ####
-  def joinRoom(self, room):
+  def joinRoom(self, room, callback=lambda x:None):
     """
     Join a room or return None if already joined.
 
@@ -1528,10 +1518,7 @@ class RoomManager:
     """
     room = room.lower()
     if room not in self._rooms:
-      self._rooms_queue.put(room)
-      return True
-    else:
-      return None
+      self._rooms_queue.put((room, callback))
 
   def leaveRoom(self, room):
     """
@@ -2012,6 +1999,7 @@ class RoomManager:
       self.mgr.removeTask(self)
 
   def _tick(self):
+
     now = time.time()
     for task in set(self._tasks):
       if task.target <= now:
@@ -2020,6 +2008,12 @@ class RoomManager:
           task.target = now + task.timeout
         else:
           self._tasks.remove(task)
+
+    if not self._rooms_queue.empty():
+        room, callback = self._rooms_queue.get()
+        con = self._Room(room, mgr = self)
+        self._rooms[room] = con
+        callback(room)
 
   def setTimeout(self, timeout, func, *args, **kw):
     """
@@ -2094,10 +2088,6 @@ class RoomManager:
   def main(self):
     self.onInit()
     self._running = True
-    for l in range(0,Number_of_Threads):
-      t = threading.Thread(target=self._joinThread)
-      t.daemon = True
-      t.start()
     while self._running:
       conns = self.getConnections()
       socks = [x._sock for x in conns]
