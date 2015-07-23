@@ -247,7 +247,7 @@ class _ANON_PM_OBJECT:
       getattr(self, func)(args)
     else:
       if debug:
-        print("unknown data: "+str(data))
+        print("[unknown] data: "+str(data))
 
   @property
   def mgr(self): return self._mgr
@@ -462,7 +462,7 @@ class PM:
       getattr(self, func)(args)
     else:
       if debug:
-        print("unknown data: "+str(data))
+        print("[unknown] data: "+str(data))
 
   ####
   # Properties
@@ -850,7 +850,7 @@ class Room:
       getattr(self, func)(args)
     else:
       if debug:
-        print("unknown data: "+str(data))
+        print("[unknown] data: "+str(data))
 
   ####
   # Received Commands
