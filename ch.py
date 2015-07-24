@@ -799,10 +799,7 @@ class Room:
   def ownerName(self): return self._owner.name
   @property
   def mods(self):
-    newset = set()
-    for mod in self._mods:
-      newset.add(mod)
-    return newset
+    return set(self._mods)
   @property
   def modNames(self):
     mods = self._getMods()
