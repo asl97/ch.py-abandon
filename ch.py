@@ -1263,6 +1263,7 @@ class Room:
 
   def rawClearUser(self, unid, ip, user):
     self._sendCommand("delallmsg", unid, ip, user)
+
   def clearUser(self, user):
     """
     Clear all of a user's messages. (Moderator only)
