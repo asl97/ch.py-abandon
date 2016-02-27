@@ -42,13 +42,6 @@ BigMessage_Multiple = 0
 BigMessage_Cut = 1
 
 ################################################################
-# Struct class
-################################################################
-class Struct:
-  def __init__(self, **entries):
-    self.__dict__.update(entries)
-
-################################################################
 # Tagserver stuff
 ################################################################
 specials = {'mitvcanal': 56, 'animeultimacom': 34, 'cricket365live': 21, 'pokemonepisodeorg': 22, 'animelinkz': 20, 'sport24lt': 56, 'narutowire': 10, 'watchanimeonn': 22, 'cricvid-hitcric-': 51, 'narutochatt': 70, 'leeplarp': 27, 'stream2watch3': 56, 'ttvsports': 56, 'ver-anime': 8, 'vipstand': 21, 'eafangames': 56, 'soccerjumbo': 21, 'myfoxdfw': 67, 'kiiiikiii': 21, 'de-livechat': 5, 'rgsmotrisport': 51, 'dbzepisodeorg': 10, 'watch-dragonball': 8, 'peliculas-flv': 69, 'tvanimefreak': 54, 'tvtvanimefreak': 54}
@@ -957,9 +950,8 @@ class Room:
     self._mqueue[i] = msg
 
   def _rcmd_u(self, args):
-    temp = Struct(**self._mqueue)
-    if hasattr(temp, args[0]):
-      msg = getattr(temp, args[0])
+    if args[0] in self._mqueue:
+      msg = self._mqueue[args[0]]
       if msg.user != self.user:
         msg.user._fontColor = msg.fontColor
         msg.user._fontFace = msg.fontFace
