@@ -921,6 +921,7 @@ class Room:
     puid = args[3]
     ip = args[6]
     name = args[1]
+    channel = args[7]
     rawmsg = ":".join(args[9:])
     msg, n, f = _clean_message(rawmsg)
     if name == "":
@@ -945,6 +946,7 @@ class Room:
       body = msg,
       raw = rawmsg,
       ip = ip,
+      channel = channel,
       nameColor = nameColor,
       fontColor = fontColor,
       fontFace = fontFace,
@@ -2342,6 +2344,7 @@ class Message:
     self._room = None
     self._raw = ""
     self._ip = None
+    self._channel = ""
     self._unid = ""
     self._nameColor = "000"
     self._fontSize = 12
@@ -2364,6 +2367,8 @@ class Message:
   def body(self): return self._body
   @property
   def ip(self): return self._ip
+  @property
+  def channel(self): return self._channel
   @property
   def fontColor(self): return self._fontColor
   @property
