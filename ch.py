@@ -802,8 +802,7 @@ class Room:
     return set(self._mods)
   @property
   def modNames(self):
-    mods = self._getMods()
-    return [x.name for x in mods]
+    return [x.name for x in self.mods]
   @property
   def userCount(self): return self._userCount
   @property
@@ -907,8 +906,8 @@ class Room:
 
   def _rcmd_mods(self, args):
     modnames = args
-    mods = set(map(lambda x: User(x.split(",")[0]), modnames))
     premods = self._mods
+    self._mods = set(map(lambda x: User(x.split(",")[0]), modnames))
     for user in mods - premods: #modded
       self._mods.add(user)
       self._callEvent("onModAdd", user)
@@ -1407,7 +1406,7 @@ class Room:
   def getLevel(self, user):
     """get the level of user in a room"""
     if user == self._owner: return 2
-    if user.name in self.modnames: return 1
+    if user.name in self.modNames: return 1
     return 0
 
   def getLastMessage(self, user = None):
