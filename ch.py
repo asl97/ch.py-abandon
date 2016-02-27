@@ -1137,7 +1137,7 @@ class Room:
     self._sendCommand("")
     self._callEvent("onPing")
 
-  def rawMessage(self, msg):
+  def rawMessage(self, msg, channel = "0"):
     """
     Send a message without n and f tags.
 
@@ -1145,9 +1145,9 @@ class Room:
     @param msg: message
     """
     if not self._silent:
-      self._sendCommand("bmsg:tl2r", msg)
+      self._sendCommand("bm:tl2r", channel, msg)
 
-  def message(self, msg, html = False):
+  def message(self, msg, html = False, channel = "0"):
     """
     Send a message. (Use "\n" for new line)
 
@@ -1175,7 +1175,7 @@ class Room:
         msg.replace("\n", "</f></p><p>%s" %(font_properties))
       msg = font_properties + msg
     msg.replace("~","&#126;")
-    self.rawMessage(msg)
+    self.rawMessage(msg, channel)
 
   def setBgMode(self, mode):
     """turn on/off bg"""

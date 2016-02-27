@@ -19,6 +19,19 @@ class TestBot(ch.RoomManager):
     if message.body.startswith("!a"):
       room.message("AAAAAAAAAAAAAA")
 
+    # channel red
+    if message.body.startswith("!b"):
+      room.message("BBBBBBBBBBBBBB", channel="256")
+
+    # channel blue
+    if message.body.startswith("!c"):
+      room.message("CCCCCCCCCCCCCC", channel="2048")
+
+    # channel mod
+    if message.body.startswith("!d"):
+      room.message("DDDDDDDDDDDDDD", channel="32768")
+
+
   def onFloodBan(self, room):
     print("You are flood banned in "+room.name)
 
