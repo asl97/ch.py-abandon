@@ -22,6 +22,7 @@ import random
 import re
 import sys
 import select
+import enum
 
 ################################################################
 # Debug stuff
@@ -35,11 +36,13 @@ import urllib.parse
 ################################################################
 # Constants
 ################################################################
-Userlist_Recent = 0
-Userlist_All = 1
+class Userlist(enum.IntEnum):
+    Recent = 0
+    All = 1
 
-BigMessage_Multiple = 0
-BigMessage_Cut = 1
+class BigMessage(enum.IntEnum):
+    Multiple = 0
+    Cut = 1
 
 ################################################################
 # Tagserver stuff
@@ -772,9 +775,9 @@ class Room:
     if mode == None: mode = self.mgr._userlistMode
     if unique == None: unique = self.mgr._userlistUnique
     if memory == None: memory = self.mgr._userlistMemory
-    if mode == Userlist_Recent:
+    if mode == Userlist.Recent:
       ul = map(lambda x: x.user, self._history[-memory:])
-    elif mode == Userlist_All:
+    elif mode == Userlist.All:
       ul = self._userlist
     if unique:
       return list(set(ul))
@@ -1153,9 +1156,9 @@ class Room:
     if not html:
       msg = msg.replace("<", "&lt;").replace(">", "&gt;")
     if len(msg) > self.mgr._maxLength:
-      if self.mgr._tooBigMessage == BigMessage_Cut:
+      if self.mgr._tooBigMessage == BigMessage.Cut:
         self.message(msg[:self.mgr._maxLength], html = html)
-      elif self.mgr._tooBigMessage == BigMessage_Multiple:
+      elif self.mgr._tooBigMessage == BigMessage.Multiple:
         while len(msg) > 0:
           sect = msg[:self.mgr._maxLength]
           msg = msg[self.mgr._maxLength:]
@@ -1471,11 +1474,11 @@ class RoomManager:
   _PMPort = 5222
   _TimerResolution = 0.2 #at least x times per second
   _pingDelay = 20
-  _userlistMode = Userlist_Recent
+  _userlistMode = Userlist.Recent
   _userlistUnique = True
   _userlistMemory = 50
   _userlistEventUnique = False
-  _tooBigMessage = BigMessage_Multiple
+  _tooBigMessage = BigMessage.Multiple
   _maxLength = 1800
   _maxHistoryLength = 150
 
