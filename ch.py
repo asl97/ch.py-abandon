@@ -36,6 +36,12 @@ import urllib.parse
 ################################################################
 # Constants
 ################################################################
+class Channel:
+    White = "0"
+    Red = "256"
+    Blue = "2048"
+    Mod = "32768"
+
 class Userlist(enum.IntEnum):
     Recent = 0
     All = 1
