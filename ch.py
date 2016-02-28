@@ -674,7 +674,7 @@ class Room:
     self._wbuf = b""
     self._wlockbuf = b""
     self._owner = None
-    self._mods = set()
+    self._mods = dict()
     self._mqueue = dict()
     self._history = list()
     self._userlist = list()
@@ -865,7 +865,7 @@ class Room:
     self._owner = User(args[0])
     self._uid = args[1]
     self._aid = args[1][4:8]
-    self._mods = set(map(lambda x: User(x.split(",")[0]), args[6].split(";")))
+    self._mods = {User(x.split(",")[0]):int(x.split(",")[1]) for x in args[6].split(";")}
     self._i_log = list()
 
   def _rcmd_denied(self, args):
@@ -1402,6 +1402,9 @@ class Room:
     if user == self._owner: return 2
     if user.name in self.modNames: return 1
     return 0
+
+  def getPerms(self, user):
+    return self._mods[user]
 
   def getLastMessage(self, user = None):
     """get last message said by user in a room"""
