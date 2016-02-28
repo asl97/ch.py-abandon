@@ -22,6 +22,7 @@ import random
 import re
 import sys
 import select
+import enum
 
 ################################################################
 # Debug stuff
@@ -35,11 +36,39 @@ import urllib.parse
 ################################################################
 # Constants
 ################################################################
-Userlist_Recent = 0
-Userlist_All = 1
+class Userlist(enum.IntEnum):
+    Recent = 0
+    All = 1
 
-BigMessage_Multiple = 0
-BigMessage_Cut = 1
+class BigMessage(enum.IntEnum):
+    Multiple = 0
+    Cut = 1
+
+class Channel(enum.IntEnum):
+    White = 0
+    Red = 256
+    Blue = 2048
+    Mod = 32768
+
+class Perms(enum.IntEnum):
+    deleted = 1
+    edit_mods = 2
+    edit_mod_visibility = 4
+    edit_bw = 8
+    edit_restrictions = 16
+    edit_group = 32
+    see_counter = 64
+    see_mod_channel = 128
+    see_mod_actions = 256
+    edit_nlp = 512
+    edit_gp_annc = 1024
+    no_sending_limitations = 8192
+    see_ips = 16384
+    close_group = 32768
+    can_broadcast = 65536
+    should_not_be_logged_mod_icon_vis = 131072
+    is_staff = 262144
+    should_not_be_logged_staff_icon_vis = 524288
 
 ################################################################
 # Tagserver stuff
@@ -772,9 +801,9 @@ class Room:
     if mode == None: mode = self.mgr._userlistMode
     if unique == None: unique = self.mgr._userlistUnique
     if memory == None: memory = self.mgr._userlistMemory
-    if mode == Userlist_Recent:
+    if mode == Userlist.Recent:
       ul = map(lambda x: x.user, self._history[-memory:])
-    elif mode == Userlist_All:
+    elif mode == Userlist.All:
       ul = self._userlist
     if unique:
       return list(set(ul))
@@ -1147,15 +1176,17 @@ class Room:
     @type msg: str
     @param msg: message
     """
+    if isinstance(channel,Channel):
+        channel = str(channel.value)
     if msg==None:
       return
     msg = msg.rstrip()
     if not html:
       msg = msg.replace("<", "&lt;").replace(">", "&gt;")
     if len(msg) > self.mgr._maxLength:
-      if self.mgr._tooBigMessage == BigMessage_Cut:
+      if self.mgr._tooBigMessage == BigMessage.Cut:
         self.message(msg[:self.mgr._maxLength], html = html)
-      elif self.mgr._tooBigMessage == BigMessage_Multiple:
+      elif self.mgr._tooBigMessage == BigMessage.Multiple:
         while len(msg) > 0:
           sect = msg[:self.mgr._maxLength]
           msg = msg[self.mgr._maxLength:]
@@ -1471,11 +1502,11 @@ class RoomManager:
   _PMPort = 5222
   _TimerResolution = 0.2 #at least x times per second
   _pingDelay = 20
-  _userlistMode = Userlist_Recent
+  _userlistMode = Userlist.Recent
   _userlistUnique = True
   _userlistMemory = 50
   _userlistEventUnique = False
-  _tooBigMessage = BigMessage_Multiple
+  _tooBigMessage = BigMessage.Multiple
   _maxLength = 1800
   _maxHistoryLength = 150
 
