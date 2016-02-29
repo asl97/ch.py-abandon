@@ -929,9 +929,7 @@ class Room:
     msg, n, f = _clean_message(rawmsg)
     if name == "":
       nameColor = None
-      name = "#" + args[2]
-      if name == "#":
-        name = "!anon" + _getAnonId(n, puid)
+      name = "#" + (args[2] or "!anon" + _getAnonId(n, puid))
     else:
       if n: nameColor = _parseNameColor(n)
       else: nameColor = None
@@ -984,9 +982,7 @@ class Room:
     msg, n, f = _clean_message(rawmsg)
     if name == "":
       nameColor = None
-      name = "#" + args[2]
-      if name == "#":
-        name = "!anon" + _getAnonId(n, puid)
+      name = "#" + (args[2] or "!anon" + _getAnonId(n, puid))
     else:
       if n: nameColor = _parseNameColor(n)
       else: nameColor = None
@@ -1017,8 +1013,7 @@ class Room:
     self._i_log.append(msg)
 
   def _rcmd_g_participants(self, args):
-    args = ":".join(args)
-    args = args.split(";")
+    args = ":".join(args).split(";")
     for data in args:
       data = data.split(":")
       puid = data[2]
@@ -1046,10 +1041,8 @@ class Room:
       if user not in self._userlist or not self.mgr._userlistEventUnique:
         self._callEvent("onLeave", user, puid)
     else: #join
-      if user not in self._userlist: doEvent = True
-      else: doEvent = False
       self._userlist.append(user)
-      if doEvent or not self.mgr._userlistEventUnique:
+      if user not in self._userlist or not self.mgr._userlistEventUnique:
         self._callEvent("onJoin", user, puid)
 
   def _rcmd_show_fw(self, args):
