@@ -1465,6 +1465,9 @@ class Room:
       rest, self._history = self._history[:-self.mgr._maxHistoryLength], self._history[-self.mgr._maxHistoryLength:]
       for msg in rest: msg.detach()
 
+  def __repr__(self):
+    return "<Room: %s>" %(self.name)
+
 ################################################################
 # RoomManager class
 ################################################################
