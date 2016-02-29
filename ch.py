@@ -740,7 +740,8 @@ class Room:
     """Disconnect from the server."""
     if not self._reconnecting: self.connected = False
     for user in self._userlist:
-      user.clearSessionIds(self)
+      if self in user._sids:
+        del user._sids[self]
     self._userlist = list()
     self._pingTask.cancel()
     self._sock.close()
@@ -936,9 +937,11 @@ class Room:
       else: nameColor = None
     i = args[5]
     unid = args[4]
-    user = User(name)
-    if puid:
-      user.updatePuid(puid)
+    user = User(
+      name = name,
+      puid = puid,
+      ip = ip
+      )
     #Create an anonymous message and queue it because msgid is unknown.
     if f: fontColor, fontFace, fontSize = _parseFont(f)
     else: fontColor, fontFace, fontSize = None, None, None
@@ -954,6 +957,7 @@ class Room:
       fontFace = fontFace,
       fontSize = fontSize,
       unid = unid,
+      puid = puid,
       room = self
     )
     self._mqueue[i] = msg
@@ -988,9 +992,11 @@ class Room:
       else: nameColor = None
     i = args[5]
     unid = args[4]
-    user = User(name)
-    if puid:
-      user.updatePuid(puid)
+    user = User(
+      name = name,
+      puid = puid,
+      ip = ip
+      )
     #Create an anonymous message and queue it because msgid is unknown.
     if f: fontColor, fontFace, fontSize = _parseFont(f)
     else: fontColor, fontFace, fontSize = None, None, None
@@ -1005,6 +1011,7 @@ class Room:
       fontFace = fontFace,
       fontSize = fontSize,
       unid = unid,
+      puid = puid,
       room = self
     )
     self._i_log.append(msg)
@@ -1014,35 +1021,36 @@ class Room:
     args = args.split(";")
     for data in args:
       data = data.split(":")
+      puid = data[2]
       name = data[3].lower()
       if name == "none": continue
       user = User(
         name = name,
-        room = self
+        room = self,
+        participant = ('1', self, data[0])
       )
-      user.addSessionId(self, data[0])
       self._userlist.append(user)
 
   def _rcmd_participant(self, args):
+    puid = args[2]
     name = args[3].lower()
     if name == "none": return
-    user = User(name)
-    puid = args[2]
-    if puid:
-      user.updatePuid(puid)
+    user = User(
+      name=name,
+      puid=puid,
+      participant=(args[0], self, args[1])
+      )
 
     if args[0] == "0": #leave
-      user.removeSessionId(self, args[1])
       self._userlist.remove(user)
       if user not in self._userlist or not self.mgr._userlistEventUnique:
-        self._callEvent("onLeave", user)
+        self._callEvent("onLeave", user, puid)
     else: #join
-      user.addSessionId(self, args[1])
       if user not in self._userlist: doEvent = True
       else: doEvent = False
       self._userlist.append(user)
       if doEvent or not self.mgr._userlistEventUnique:
-        self._callEvent("onJoin", user)
+        self._callEvent("onJoin", user, puid)
 
   def _rcmd_show_fw(self, args):
     self._callEvent("onFloodWarning")
@@ -2209,26 +2217,68 @@ class RoomManager:
     self.user._fontSize = size
 
 ################################################################
-# User class (well, yeah, I lied, it's actually _User)
+# User class
 ################################################################
-_users = dict()
-def User(name, *args, **kw):
-  if name == None: name = ""
-  name = name.lower()
-  user = _users.get(name)
-  if not user:
-    user = _User(name = name, *args, **kw)
-    _users[name] = user
-  return user
+class User:
+  _users = dict()
+
+  def __getattr__(self, key):
+    return getattr(self.user, key)
+
+  def __eq__(self, other):
+    return self.user == getattr(other,"user",other)
+
+  def __hash__(self):
+    return hash(self.user)
+
+  def __init__(self, name, *args, **kw):
+    if not name: return
+    name = name.lower()
+    user = self._users.get(name)
+    if not user:
+      user = _User(name)
+      self._users[name] = user
+
+    self.user = user
+
+    for attr, val in kw.items():
+      if val == None: continue
+      if hasattr(self, "_h_" + attr):
+          getattr(self, "_h_" + attr)(val)
+      else:
+        setattr(user, "_" + attr, val)
+
+  def _h_ip(self, val):
+    self.user._ip = val
+    self.user._ips.add(val)
+
+  def _h_puid(self, val):
+    self.user._puid = val
+    self.user._puids.add(val)
+
+  def _h_participant(self, val):
+    if val[0] == '1':
+      if val[1] not in self.user._sids:
+        self.user._sids[val[1]] = set()
+      self.user._sids[val[1]].add(val[2])
+    elif val[0] == '0':
+      if val[1] in self.user._sids:
+        self.user._sids[val[1]].remove(val[2])
+        if not self.user._sids[val[1]]:
+          del self.user._sids[val[1]]
 
 class _User:
   """Class that represents a user."""
   ####
   # Init
   ####
-  def __init__(self, name, **kw):
+  def __init__(self, name):
     self._name = name.lower()
-    self._puid = ""
+    self._puid = None
+    self._puids = set()
+    self._ip = None
+    self._ips = set()
+    self._room = None
     self._sids = dict()
     self._msgs = list()
     self._nameColor = "000"
@@ -2237,9 +2287,6 @@ class _User:
     self._fontColor = "000"
     self._mbg = False
     self._mrec = False
-    for attr, val in kw.items():
-      if val == None: continue
-      setattr(self, "_" + attr, val)
 
   ####
   # Properties
@@ -2248,6 +2295,14 @@ class _User:
   def name(self): return self._name
   @property
   def puid(self): return self._puid
+  @property
+  def puids(self): return self._puids
+  @property
+  def ip(self): return self._ip
+  @property
+  def ips(self): return self._ips
+  @property
+  def room(self): return self._room
   @property
   def sessionids(self, room = None):
     if room:
@@ -2266,40 +2321,6 @@ class _User:
   def fontSize(self): return self._fontSize
   @property
   def nameColor(self): return self._nameColor
-
-  ####
-  # Util
-  ####
-  def addSessionId(self, room, sid):
-    if room not in self._sids:
-      self._sids[room] = set()
-    self._sids[room].add(sid)
-
-  def removeSessionId(self, room, sid):
-    try:
-      self._sids[room].remove(sid)
-      if len(self._sids[room]) == 0:
-        del self._sids[room]
-    except KeyError:
-      pass
-
-  def clearSessionIds(self, room):
-    try:
-      del self._sids[room]
-    except KeyError:
-      pass
-
-  def hasSessionId(self, room, sid):
-    try:
-      if sid in self._sids[room]:
-        return True
-      else:
-        return False
-    except KeyError:
-      return False
-
-  def updatePuid(self, puid):
-    self._puid = puid
 
   ####
   # Repr
@@ -2387,3 +2408,7 @@ class Message:
   def raw(self): return self._raw
   @property
   def unid(self): return self._unid
+  @property
+  def puid(self): return self._puid
+  @property
+  def nid(self): return self._puid
