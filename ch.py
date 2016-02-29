@@ -859,10 +859,10 @@ class Room:
     if args[2] == "N" and self.mgr.password == None and self.mgr.name == None:
       n = args[4].rsplit('.', 1)[0]
       n = n[-4:]
-      aid = args[1][0:8]
-      pid = "!anon" + _getAnonId(n, aid)
-      self._botname = pid
-      self._currentname = pid
+      puid = args[1][0:8]
+      name = "!anon" + _getAnonId(n, puid)
+      self._botname = name
+      self._currentname = name
       self.user._nameColor = n
     # if got name, join room as name and no password
     elif args[2] == "N" and self.mgr.password == None:
@@ -874,7 +874,7 @@ class Room:
       self.disconnect()
     self._owner = User(args[0])
     self._uid = args[1]
-    self._aid = args[1][4:8]
+    self._puid = args[1][0:8]
     self._mods = {User(x.split(",")[0]):int(x.split(",")[1]) for x in args[6].split(";")}
     self._i_log = list()
 
