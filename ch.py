@@ -51,6 +51,42 @@ class BigMessage(enum.IntEnum):
     Cut = 1
 
 ################################################################
+# Perms stuff
+################################################################
+
+class Perms(enum.IntEnum):
+    deleted = 1
+    edit_mods = 2
+    edit_mod_visibility = 4
+    edit_bw = 8
+    edit_restrictions = 16
+    edit_group = 32
+    see_counter = 64
+    see_mod_channel = 128
+    see_mod_actions = 256
+    edit_nlp = 512
+    edit_gp_annc = 1024
+    no_sending_limitations = 8192
+    see_ips = 16384
+    close_group = 32768
+    can_broadcast = 65536
+    should_not_be_logged_mod_icon_vis = 131072
+    is_staff = 262144
+    should_not_be_logged_staff_icon_vis = 524288
+
+# really ugly and hackish stuff
+class _Perms:
+  class _internal:
+    def __getattr__(self, val):
+      if hasattr(Perms, val):
+        return bool(self._perms.perm&Perms[val])
+    def __init__(self, _perms):
+      self._perms = _perms
+  def __init__(self, perm):
+    self.perm = perm
+    self.perms = self._internal(self)
+
+################################################################
 # Tagserver stuff
 ################################################################
 specials = {'mitvcanal': 56, 'animeultimacom': 34, 'cricket365live': 21, 'pokemonepisodeorg': 22, 'animelinkz': 20, 'sport24lt': 56, 'narutowire': 10, 'watchanimeonn': 22, 'cricvid-hitcric-': 51, 'narutochatt': 70, 'leeplarp': 27, 'stream2watch3': 56, 'ttvsports': 56, 'ver-anime': 8, 'vipstand': 21, 'eafangames': 56, 'soccerjumbo': 21, 'myfoxdfw': 67, 'kiiiikiii': 21, 'de-livechat': 5, 'rgsmotrisport': 51, 'dbzepisodeorg': 10, 'watch-dragonball': 8, 'peliculas-flv': 69, 'tvanimefreak': 54, 'tvtvanimefreak': 54}
@@ -872,10 +908,18 @@ class Room:
     elif args[2] != "M": #unsuccesful login
       self._callEvent("onLoginFail")
       self.disconnect()
-    self._owner = User(args[0])
     self._uid = args[1]
     self._puid = args[1][0:8]
-    self._mods = {User(x.split(",")[0]):int(x.split(",")[1]) for x in args[6].split(";")}
+    self._owner = User(
+      name = args[0],
+      perm = (self.name, 1048575)
+      )
+
+    self._mods = dict()
+    for x in args[6].split(";"):
+      perm = int(x.split(",")[1])
+      self._mods[User(name=x.split(",")[0], perm=(self.name, perm))] = perm
+
     self._i_log = list()
 
   def _rcmd_denied(self, args):
@@ -910,7 +954,10 @@ class Room:
   def _rcmd_mods(self, args):
     modnames = args
     premods = self._mods
-    self._mods = set(map(lambda x: User(x.split(",")[0]), modnames))
+    self._mods = dict()
+    for x in args[6].split(";"):
+      perm = int(x.split(",")[1])
+      self._mods[User(name=x.split(",")[0], perm=(self.name, perm))] = perm
     for user in mods - premods: #modded
       self._mods.add(user)
       self._callEvent("onModAdd", user)
@@ -2252,6 +2299,9 @@ class User:
     self.user._puid = val
     self.user._puids.add(val)
 
+  def _h_perm(self, val):
+    self.user._perms[val[0]] = _Perms(val[1])
+
   def _h_participant(self, val):
     if val[0] == '1':
       if val[1] not in self.user._sids:
@@ -2274,6 +2324,7 @@ class _User:
     self._puids = set()
     self._ip = None
     self._ips = set()
+    self._perms = dict()
     self._room = None
     self._sids = dict()
     self._msgs = list()
@@ -2317,6 +2368,16 @@ class _User:
   def fontSize(self): return self._fontSize
   @property
   def nameColor(self): return self._nameColor
+
+  ####
+  # Util
+  ####
+
+  def getPerm(self, room):
+    return self._perms[room].perm
+
+  def getPerms(self, room):
+    return self._perms[room].perms
 
   ####
   # Repr
