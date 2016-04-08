@@ -267,7 +267,8 @@ class _ANON_PM_OBJECT:
     while self._rbuf.find(b"\x00") != -1:
       data = self._rbuf.split(b"\x00")
       for food in data[:-1]:
-        self._process(food.decode(errors="replace").rstrip("\r\n"))
+        food = food.decode(errors="replace").rstrip("\r\n")
+        if food: self._process(food)
       self._rbuf = data[-1]
 
   def _process(self, data):
@@ -482,7 +483,8 @@ class PM:
     while self._rbuf.find(b"\x00") != -1:
       data = self._rbuf.split(b"\x00")
       for food in data[:-1]:
-        self._process(food.decode(errors="replace").rstrip("\r\n"))
+        food = food.decode(errors="replace").rstrip("\r\n")
+        if food: self._process(food)
       self._rbuf = data[-1]
 
   def _process(self, data):
@@ -867,7 +869,8 @@ class Room:
     while self._rbuf.find(b"\x00") != -1:
       data = self._rbuf.split(b"\x00")
       for food in data[:-1]:
-        self._process(food.decode(errors="replace").rstrip("\r\n"))
+        food = food.decode(errors="replace").rstrip("\r\n")
+        if food: self._process(food)
       self._rbuf = data[-1]
 
   def _process(self, data):
