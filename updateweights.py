@@ -5,13 +5,13 @@ import zlib
 
 
 def findid():
-    url = urllib.request.urlopen("http://st.chatango.com/js/gz/emb_perc.js")
+    url = urllib.request.urlopen("http://st.chatango.com/js/gz/emb_fullsize.js")
     if url.getheader('Content-Encoding') == "gzip":
         print("Server weights encoded with gzip, decoding...")
         data = zlib.decompress(url.read(), 47).decode(encoding='ascii', errors='ignore')
     else:
         data = url.read()
-    return re.search("r\d+", data).group(0)
+    return 'r' + re.search('this.qc="(\d+)"', data).group(1)
 
 
 # noinspection PyShadowingNames,PyShadowingNames
@@ -25,7 +25,7 @@ def findweights(_id):
         data = url.read()
     print("Processing server weights...")
     data = data.decode("utf-8", "ignore").splitlines()
-    tags = json.loads(data[6].split(" = ")[-1])
+    tags = json.loads(data[7].split(" = ")[-1])
     weights = []
     for a, b in tags["sm"]:
         c = tags["sw"][b]
@@ -38,7 +38,7 @@ def updatech(weights):
     print("Writing server weights to ch.py...")
     with open("ch.py", "r+") as ch:
         rdata = ch.read()
-        wdata = re.sub("tsweights = .*", "tsweights = %s" % str(weights), rdata)
+        wdata = re.sub("tsweights = \[\[.*?\]\]", "tsweights = %s" % str(weights), rdata, flags=re.DOTALL)
         ch.seek(0)
         ch.write(wdata)
         ch.truncate()
