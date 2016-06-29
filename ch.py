@@ -1672,7 +1672,7 @@ class RoomManager:
     _anonPMHost = "b1.chatango.com"
     _PMHost = "c1.chatango.com"
     _PMPort = 5222
-    _TimerResolution = 0.2  # at least x times per second
+    _TimerResolution = 0.2  # at least x second per tick
     _pingDelay = 20
     _userlistMode = Userlist.Recent
     _userlistUnique = True
