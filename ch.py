@@ -2301,7 +2301,7 @@ class RoomManager:
         li = list(self._rooms.values())
         if self._pm:
             li.extend(self._pm.getConnections())
-        return [c for c in li if c._sock is not None]
+        return {c._sock: c for c in li if c._sock is not None}
 
     ####
     # Main
@@ -2311,11 +2311,11 @@ class RoomManager:
         self._running = True
         while self._running:
             conns = self.getConnections()
-            socks = [x._sock for x in conns]
-            wsocks = [x._sock for x in conns if x._wbuf != b""]
+            socks = [sock for sock in conns]
+            wsocks = [sock for sock, con in conns.items() if con._wbuf]
             rd, wr, sp = select.select(socks, wsocks, [], self._TimerResolution if self._rooms_queue.empty() else 0)
             for sock in rd:
-                con = [c for c in conns if c._sock == sock][0]
+                con = conns[sock]
                 try:
                     data = sock.recv(1024)
                     if len(data) > 0:
@@ -2325,7 +2325,7 @@ class RoomManager:
                 except socket.error:
                     pass
             for sock in wr:
-                con = [c for c in conns if c._sock == sock][0]
+                con = conns[sock]
                 try:
                     size = sock.send(con._wbuf)
                     con._wbuf = con._wbuf[size:]
