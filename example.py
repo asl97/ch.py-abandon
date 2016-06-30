@@ -1,8 +1,9 @@
 #!/usr/bin/python
 import ch
+import ch.roommanager
 
 
-class TestBot(ch.RoomManager):
+class TestBot(ch.roommanager.RoomManager):
     def onConnect(self, room):
         print("Connected to " + room.name)
 
