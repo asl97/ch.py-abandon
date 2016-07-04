@@ -226,14 +226,11 @@ class Room:
         @type data: bytes
         @param data: data to be fed
         """
-        self._rbuf += data
-        while self._rbuf.find(b"\x00") != -1:
-            data = self._rbuf.split(b"\x00")
-            for food in data[:-1]:
-                food = food.decode(errors="replace").rstrip("\r\n")
-                if food:
-                    self._process(food)
-            self._rbuf = data[-1]
+        *foods, self._rbuf = (self._rbuf + data).split(b"\x00")
+        for food in foods:
+            food = food.decode(errors="replace").rstrip("\r\n")
+            if food:
+                self._process(food)
 
     def _process(self, data):
         """
