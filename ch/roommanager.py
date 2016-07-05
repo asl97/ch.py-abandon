@@ -58,6 +58,8 @@ class RoomManager:
         self._tasks = set()
         self._rooms = dict()
         self._rooms_queue = queue.Queue()
+        self._sock_write_queue = queue.Queue()
+        self.tick_thread = None
         if pm:
             if self._password:
                 self._pm = self._PM(mgr=self)
@@ -614,6 +616,8 @@ class RoomManager:
             con = self._Room(room, mgr=self)
             self._rooms[room] = con
             callback(room)
+        else:
+            time.sleep(self._TimerResolution)
 
     def setTimeout(self, timeout, func, *args, **kw):
         """
@@ -669,17 +673,22 @@ class RoomManager:
             li.extend(self._pm.getConnections())
         return {c._sock: c for c in li if c._sock is not None}
 
+    def start_threads(self):
+        self.tick_thread = threading.Thread(target=self.tick_worker, name='tick_worker')
+        self.tick_thread.start()
+
     ####
     # Main
     ####
     def main(self):
         self.onInit()
         self._running = True
+        self.start_threads()
         while self._running:
             conns = self.getConnections()
             socks = [sock for sock in conns]
             wsocks = [sock for sock, con in conns.items() if con._wbuf]
-            rd, wr, sp = select.select(socks, wsocks, [], self._TimerResolution if self._rooms_queue.empty() else 0)
+            rd, wr, sp = select.select(socks, wsocks, [], self._TimerResolution)
             for sock in rd:
                 con = conns[sock]
                 try:
@@ -697,6 +706,10 @@ class RoomManager:
                     con._wbuf = con._wbuf[size:]
                 except socket.error:
                     pass
+            self._tick()
+
+    def tick_worker(self):
+        while self._running:
             self._tick()
 
     @classmethod
