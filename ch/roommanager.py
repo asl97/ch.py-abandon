@@ -772,7 +772,7 @@ class RoomManager:
         self.main()
 
     def stop(self):
-        for conn in list(self._rooms.values()):
+        for conn in self.getConnections().values():
             conn.disconnect()
         self._sock_write_queue.put(None)
         self._running = False
