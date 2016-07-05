@@ -76,9 +76,9 @@ class _ANON_PM_OBJECT:
         @type data: bytes
         @param data: data to be fed
         """
-        *foods, self._rbuf = (self._rbuf + data).split(b"\x00")
+        *foods, self._rbuf = (self._rbuf + data.decode('utf-8', errors="replace")).split("\x00")
         for food in foods:
-            food = food.decode(errors="replace").rstrip("\r\n")
+            food = food.rstrip("\r\n")
             if food:
                 self._process(food)
 
@@ -216,7 +216,7 @@ class PM:
         self._firstCommand = True
         self._wbuf = b""
         self._wlockbuf = b""
-        self._rbuf = b""
+        self._rbuf = ""
         self._pingTask = None
         self._connect()
 
@@ -298,9 +298,9 @@ class PM:
         @type data: bytes
         @param data: data to be fed
         """
-        *foods, self._rbuf = (self._rbuf + data).split(b"\x00")
+        *foods, self._rbuf = (self._rbuf + data.decode('utf-8', errors="replace")).split("\x00")
         for food in foods:
-            food = food.decode(errors="replace").rstrip("\r\n")
+            food = food.rstrip("\r\n")
             if food:
                 self._process(food)
 
