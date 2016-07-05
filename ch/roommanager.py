@@ -64,7 +64,7 @@ class RoomManager:
     _userlistMemory = 50
     _userlistEventUnique = False
     _tooBigMessage = ch.BigMessage.Multiple
-    _maxLength = 1800
+    _maxLength = 700
     _maxHistoryLength = 150
 
     ####
