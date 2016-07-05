@@ -60,6 +60,7 @@ class RoomManager:
         self._rooms_queue = queue.Queue()
         self._sock_write_queue = queue.Queue()
         self.tick_thread = None
+        self.send_thread = None
         if pm:
             if self._password:
                 self._pm = self._PM(mgr=self)
@@ -665,7 +666,7 @@ class RoomManager:
     # Util
     ####
     def _write(self, room, data):
-        room._wbuf += data
+        self._sock_write_queue.put((room._sock, data))
 
     def getConnections(self):
         li = list(self._rooms.values())
@@ -676,6 +677,8 @@ class RoomManager:
     def start_threads(self):
         self.tick_thread = threading.Thread(target=self.tick_worker, name='tick_worker')
         self.tick_thread.start()
+        self.send_thread = threading.Thread(target=self.send_worker, name='send_worker')
+        self.send_thread.start()
 
     ####
     # Main
@@ -686,9 +689,7 @@ class RoomManager:
         self.start_threads()
         while self._running:
             conns = self.getConnections()
-            socks = [sock for sock in conns]
-            wsocks = [sock for sock, con in conns.items() if con._wbuf]
-            rd, wr, sp = select.select(socks, wsocks, [], self._TimerResolution)
+            rd, wr, sp = select.select(conns, [], [])
             for sock in rd:
                 con = conns[sock]
                 try:
@@ -699,18 +700,15 @@ class RoomManager:
                         con.disconnect()
                 except socket.error:
                     pass
-            for sock in wr:
-                con = conns[sock]
-                try:
-                    size = sock.send(con._wbuf)
-                    con._wbuf = con._wbuf[size:]
-                except socket.error:
-                    pass
             self._tick()
 
     def tick_worker(self):
         while self._running:
             self._tick()
+
+    def send_worker(self):
+        for sock, data in iter(self._sock_write_queue.get, None):
+            sock.sendall(data)
 
     @classmethod
     def easy_start(cls, rooms=None, name=None, password=None, pm=True):
@@ -749,6 +747,7 @@ class RoomManager:
     def stop(self):
         for conn in list(self._rooms.values()):
             conn.disconnect()
+        self._sock_write_queue.put(None)
         self._running = False
 
     ####
