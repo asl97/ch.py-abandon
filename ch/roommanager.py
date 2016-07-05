@@ -23,6 +23,25 @@ import time
 import ch
 
 
+# noinspection PyUnusedLocal
+class DummyConnection:
+    def __init__(self):
+        self._sock_pair = socket.socketpair()
+        self._sock = self._sock_pair[0]
+
+    def recv(self, num):
+        return self._sock_pair[0].recv(1)
+
+    def notify(self):
+        self._sock_pair[1].sendall(b'x')
+
+    def _feed(self, data):
+        pass
+
+    def disconnect(self):
+        pass
+
+
 ################################################################
 # RoomManager class
 ################################################################
@@ -61,6 +80,8 @@ class RoomManager:
         self._sock_write_queue = queue.Queue()
         self.tick_thread = None
         self.send_thread = None
+        self.join_thread = None
+        self._dummy_con = DummyConnection()
         if pm:
             if self._password:
                 self._pm = self._PM(mgr=self)
@@ -612,13 +633,7 @@ class RoomManager:
                 else:
                     self._tasks.remove(task)
 
-        if not self._rooms_queue.empty():
-            room, callback = self._rooms_queue.get()
-            con = self._Room(room, mgr=self)
-            self._rooms[room] = con
-            callback(room)
-        else:
-            time.sleep(self._TimerResolution)
+        time.sleep(self._TimerResolution)
 
     def setTimeout(self, timeout, func, *args, **kw):
         """
@@ -672,6 +687,7 @@ class RoomManager:
         li = list(self._rooms.values())
         if self._pm:
             li.extend(self._pm.getConnections())
+        li.append(self._dummy_con)
         return {c._sock: c for c in li if c._sock is not None}
 
     def start_threads(self):
@@ -679,6 +695,9 @@ class RoomManager:
         self.tick_thread.start()
         self.send_thread = threading.Thread(target=self.send_worker, name='send_worker')
         self.send_thread.start()
+        self.join_thread = threading.Thread(target=self.join_worker, name='join_worker')
+        self.join_thread.daemon = True
+        self.join_thread.start()
 
     ####
     # Main
@@ -709,6 +728,14 @@ class RoomManager:
     def send_worker(self):
         for sock, data in iter(self._sock_write_queue.get, None):
             sock.sendall(data)
+
+    def join_worker(self):
+        while True:
+            room, callback = self._rooms_queue.get()
+            con = self._Room(room, mgr=self)
+            self._rooms[room] = con
+            callback(room)
+            self._dummy_con.notify()
 
     @classmethod
     def easy_start(cls, rooms=None, name=None, password=None, pm=True):
