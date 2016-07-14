@@ -21,6 +21,7 @@ import threading
 import time
 
 import ch
+import ch.anonpm
 
 
 # noinspection PyUnusedLocal
@@ -54,7 +55,7 @@ class RoomManager:
     ####
     _Room = ch.Room
     _PM = ch.PM
-    _ANON_PM = ch.ANON_PM
+    _ANON_PM = ch.anonpm.ANON_PM
     _anonPMHost = "b1.chatango.com"
     _PMHost = "c1.chatango.com"
     _PMPort = 5222
@@ -81,6 +82,7 @@ class RoomManager:
         self._sock_write_queue = queue.Queue()
         self.tick_thread = None
         self.send_thread = None
+        self.recv_thread = None
         self.join_thread = None
         self._dummy_con = DummyConnection()
         if pm:
@@ -131,10 +133,7 @@ class RoomManager:
         @return: the room
         """
         room = room.lower()
-        if room in self._rooms:
-            return self._rooms[room]
-        else:
-            return None
+        return self._rooms.get(room)
 
     ####
     # Properties
@@ -157,7 +156,7 @@ class RoomManager:
 
     @property
     def roomNames(self):
-        return set(self._rooms.keys())
+        return set(self._rooms)
 
     @property
     def pm(self):
@@ -168,6 +167,10 @@ class RoomManager:
     ####
     def onInit(self):
         """Called on init."""
+        pass
+
+    def onFinishStartup(self):
+        """Called at the end of startup"""
         pass
 
     def safePrint(self, text):
@@ -696,6 +699,8 @@ class RoomManager:
         self.tick_thread.start()
         self.send_thread = threading.Thread(target=self.send_worker, name='send_worker')
         self.send_thread.start()
+        self.recv_thread = threading.Thread(target=self.recv_worker, name='recv_worker')
+        self.recv_thread.start()
         self.join_thread = threading.Thread(target=self.join_worker, name='join_worker')
         self.join_thread.daemon = True
         self.join_thread.start()
@@ -707,6 +712,17 @@ class RoomManager:
         self.onInit()
         self._running = True
         self.start_threads()
+        self.onFinishStartup()
+
+    def tick_worker(self):
+        while self._running:
+            self._tick()
+
+    def send_worker(self):
+        for sock, data in iter(self._sock_write_queue.get, None):
+            sock.sendall(data)
+
+    def recv_worker(self):
         while self._running:
             conns = self.getConnections()
             rd, wr, sp = select.select(conns, [], [])
@@ -720,19 +736,9 @@ class RoomManager:
                         con.disconnect()
                 except socket.error:
                     pass
-            self._tick()
-
-    def tick_worker(self):
-        while self._running:
-            self._tick()
-
-    def send_worker(self):
-        for sock, data in iter(self._sock_write_queue.get, None):
-            sock.sendall(data)
 
     def join_worker(self):
-        while True:
-            room, callback = self._rooms_queue.get()
+        for room, callback in iter(self._rooms_queue.get, None):
             con = self._Room(room, mgr=self)
             self._rooms[room] = con
             callback(room)
@@ -744,7 +750,7 @@ class RoomManager:
         Prompts the user for missing info, then starts.
 
         @type rooms: list
-        @param rooms: rooms to join
+        @param rooms: _rooms to join
 
         @type name: str
         @param name: name to join as ("" = None, None = unspecified)
@@ -773,10 +779,12 @@ class RoomManager:
         self.main()
 
     def stop(self):
+        self._running = False
         for conn in self.getConnections().values():
             conn.disconnect()
         self._sock_write_queue.put(None)
-        self._running = False
+        self._rooms_queue.put(None)
+        self._dummy_con.notify()
 
     ####
     # Commands
@@ -784,25 +792,25 @@ class RoomManager:
     def enableBg(self):
         """Enable background if available."""
         self.user._mbg = True
-        for room in self.rooms:
+        for room in self._rooms:
             room.setBgMode(1)
 
     def disableBg(self):
         """Disable background."""
         self.user._mbg = False
-        for room in self.rooms:
+        for room in self._rooms:
             room.setBgMode(0)
 
     def enableRecording(self):
         """Enable recording if available."""
         self.user._mrec = True
-        for room in self.rooms:
+        for room in self._rooms:
             room.setRecordingMode(1)
 
     def disableRecording(self):
         """Disable recording."""
         self.user._mrec = False
-        for room in self.rooms:
+        for room in self._rooms:
             room.setRecordingMode(0)
 
     def setNameColor(self, color3x):
@@ -839,8 +847,4 @@ class RoomManager:
         @type size: int
         @param size: the font size (limited: 9 to 22)
         """
-        if size < 9:
-            size = 9
-        if size > 22:
-            size = 22
-        self.user._fontSize = size
+        self.user._fontSize = min(max(size, 9), 22)

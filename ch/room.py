@@ -50,7 +50,6 @@ class Room:
         self._mqueue = dict()
         self._history = list()
         self._userlist = list()
-        self._firstCommand = True
         self._connectAmmount = 0
         self._premium = False
         self._userCount = 0
@@ -63,6 +62,8 @@ class Room:
         self._silent = False
         self._banlist = dict()
         self._unbanlist = dict()
+        self._sendCommand = self._firstSendCommand
+        self._write = self._writeUnlocked
 
         # Inited vars
         if self._mgr:
@@ -75,11 +76,10 @@ class Room:
         """Connect to the server."""
         self._sock = socket.socket()
         self._sock.connect((self._server, self._port))
-        self._sock.setblocking(False)
-        self._firstCommand = True
+        self._sendCommand = self._firstSendCommand
         self._wbuf = b""
         self._auth()
-        self._pingTask = self.mgr.setInterval(self.mgr._pingDelay, self.ping)
+        self._pingTask = self._mgr.setInterval(self._mgr._pingDelay, self.ping)
         if not self._reconnecting:
             self.connected = True
 
@@ -112,14 +112,14 @@ class Room:
         self._pingTask.cancel()
         self._sock.close()
         if not self._reconnecting:
-            del self.mgr._rooms[self.name]
+            del self._mgr._rooms[self.name]
 
     def _auth(self):
         """Authenticate."""
         # login as name with password
-        if self.mgr.name and self.mgr.password:
-            self._sendCommand("bauth", self.name, self._uid, self.mgr.name, self.mgr.password)
-            self._currentname = self.mgr.name
+        if self._mgr.name and self._mgr.password:
+            self._sendCommand("bauth", self.name, self._uid, self._mgr.name, self._mgr.password)
+            self._currentname = self._mgr.name
         # login as anon
         else:
             self._sendCommand("bauth", self.name)
@@ -135,11 +135,11 @@ class Room:
 
     @property
     def botName(self):
-        if self.mgr.name and self.mgr.password:
-            return self.mgr.name
-        elif self.mgr.name and self.mgr.password is None:
-            return "#" + self.mgr.name
-        elif self.mgr.name is None:
+        if self._mgr.name and self._mgr.password:
+            return self._mgr.name
+        elif self._mgr.name and self._mgr.password is None:
+            return "#" + self._mgr.name
+        elif self._mgr.name is None:
             return self._botname
 
     @property
@@ -151,34 +151,24 @@ class Room:
         return self._mgr
 
     @property
-    def userList(self, mode=None, unique=None, memory=None):
-        ul = None
-
-        if mode is None:
-            mode = self.mgr._userlistMode
-        if unique is None:
-            unique = self.mgr._userlistUnique
-        if memory is None:
-            memory = self.mgr._userlistMemory
-
-        if mode == ch.Userlist.Recent:
-            ul = map(lambda x: x.user, self._history[-memory:])
-        elif mode == ch.Userlist.All:
+    def userList(self):
+        if self._mgr._userlistMode == ch.Userlist.Recent:
+            ul = (x.user for x in self._history[-self._mgr._userlistMemory:])
+        else:
             ul = self._userlist
 
-        if unique:
+        if self._mgr._userlistUnique:
             return list(set(ul))
         else:
             return ul
 
     @property
     def usernames(self):
-        ul = self._userlist
-        return list(map(lambda x: x.name, ul))
+        return [x.name for x in self._userlist]
 
     @property
     def user(self):
-        return self.mgr.user
+        return self._mgr.user
 
     @property
     def owner(self):
@@ -194,7 +184,7 @@ class Room:
 
     @property
     def modNames(self):
-        return [x.name for x in self.mods]
+        return [x.name for x in self._mods]
 
     @property
     def userCount(self):
@@ -254,7 +244,7 @@ class Room:
     ####
     def _rcmd_ok(self, args):
         # if no name, join room as anon and no password
-        if args[2] == "N" and self.mgr.password is None and self.mgr.name is None:
+        if args[2] == "N" and self._mgr.password is None and self._mgr.name is None:
             n = args[4].rsplit('.', 1)[0]
             n = n[-4:]
             puid = args[1][0:8]
@@ -263,9 +253,9 @@ class Room:
             self._currentname = name
             self.user._nameColor = n
         # if got name, join room as name and no password
-        elif args[2] == "N" and self.mgr.password is None:
-            self._sendCommand("blogin", self.mgr.name)
-            self._currentname = self.mgr.name
+        elif args[2] == "N" and self._mgr.password is None:
+            self._sendCommand("blogin", self._mgr.name)
+            self._currentname = self._mgr.name
         # if got password but fail to login
         elif args[2] != "M":  # unsuccesful login
             self._callEvent("onLoginFail")
@@ -458,11 +448,11 @@ class Room:
 
         if args[0] == "0":  # leave
             self._userlist.remove(user)
-            if user not in self._userlist or not self.mgr._userlistEventUnique:
+            if not self._mgr._userlistEventUnique or user not in self._userlist:
                 self._callEvent("onLeave", user, puid)
         else:  # join
             self._userlist.append(user)
-            if user not in self._userlist or not self.mgr._userlistEventUnique:
+            if not self._mgr._userlistEventUnique or user not in self._userlist:
                 self._callEvent("onJoin", user, puid)
 
     def _rcmd_show_fw(self, args):
@@ -476,11 +466,10 @@ class Room:
 
     def _rcmd_delete(self, args):
         msg = self._msgs.get(args[0])
-        if msg:
-            if msg in self._history:
-                self._history.remove(msg)
-                self._callEvent("onMessageDelete", msg.user, msg)
-                msg.detach()
+        if msg and msg in self._history:
+            self._history.remove(msg)
+            self._callEvent("onMessageDelete", msg.user, msg)
+            msg.detach()
 
     def _rcmd_deleteall(self, args):
         for msgid in args:
@@ -597,13 +586,13 @@ class Room:
         msg = msg.rstrip()
         if not html:
             msg = msg.replace("<", "&lt;").replace(">", "&gt;")
-        if len(msg) > self.mgr._maxLength:
-            if self.mgr._tooBigMessage == ch.BigMessage.Cut:
-                self.message(msg[:self.mgr._maxLength], html=html)
-            elif self.mgr._tooBigMessage == ch.BigMessage.Multiple:
+        if len(msg) > self._mgr._maxLength:
+            if self._mgr._tooBigMessage == ch.BigMessage.Cut:
+                self.message(msg[:self._mgr._maxLength], html=html)
+            elif self._mgr._tooBigMessage == ch.BigMessage.Multiple:
                 while len(msg) > 0:
-                    sect = msg[:self.mgr._maxLength]
-                    msg = msg[self.mgr._maxLength:]
+                    sect = msg[:self._mgr._maxLength]
+                    msg = msg[self._mgr._maxLength:]
                     self.message(sect, html=html)
             return
         msg = "<n" + self.user.nameColor + "/>" + msg
@@ -810,45 +799,51 @@ class Room:
     # Util
     ####
     def _getBanRecord(self, user):
-        if user in self._banlist:
-            return self._banlist[user]
-        return None
+        return self._banlist.get(user)
 
     def _callEvent(self, evt, *args, **kw):
-        getattr(self.mgr, evt)(self, *args, **kw)
-        self.mgr.onEventCalled(self, evt, *args, **kw)
+        getattr(self._mgr, evt)(self, *args, **kw)
+        self._mgr.onEventCalled(self, evt, *args, **kw)
 
-    def _write(self, data):
-        if self._wlock:
-            self._wlockbuf += data
-        else:
-            self.mgr._write(self, data)
+    def _writeLocked(self, data):
+        self._wlockbuf += data
+
+    def _writeUnlocked(self, data):
+        self._mgr._write(self, data)
 
     def _setWriteLock(self, lock):
         self._wlock = lock
         if self._wlock is False:
+            self._write = self._writeUnlocked
             self._write(self._wlockbuf)
             self._wlockbuf = b""
+        else:
+            self._write = self._writeLocked
 
-    def _sendCommand(self, *args):
+    def _firstSendCommand(self, *args):
         """
         Send a command.
 
         @type args: [str, str, ...]
         @param args: command and list of arguments
         """
-        if self._firstCommand:
-            terminator = b"\x00"
-            self._firstCommand = False
-        else:
-            terminator = b"\r\n\x00"
-        self._write(":".join(args).encode() + terminator)
+        self._sendCommand = self._otherSendCommand
+        self._write(":".join(args).encode() + b"\x00")
+
+    def _otherSendCommand(self, *args):
+        """
+        Send a command.
+
+        @type args: [str, str, ...]
+        @param args: command and list of arguments
+        """
+        self._write(":".join(args).encode() + b"\r\n\x00")
 
     def getLevel(self, user):
         """get the level of user in a room"""
         if user == self._owner:
             return 2
-        if user.name in self.modNames:
+        elif user in self._mods:
             return 1
         return 0
 
@@ -857,22 +852,9 @@ class Room:
 
     def getLastMessage(self, user=None):
         """get last message said by user in a room"""
-        if user:
-            try:
-                i = 1
-                while True:
-                    msg = self._history[-i]
-                    if msg.user == user:
-                        return msg
-                    i += 1
-            except IndexError:
-                return None
-        else:
-            try:
-                return self._history[-1]
-            except IndexError:
-                return None
-        return None
+        for msg in self._history[::-1]:
+            if not user or msg.user == user:
+                return msg
 
     def findUser(self, name):
         """check if user is in the room
@@ -880,18 +862,9 @@ class Room:
         return User(name) if name in room else None
         """
         name = name.lower()
-        ul = self._userlist
-        udi = dict(zip([u.name for u in ul], ul))
-        cname = None
-        for n in udi.keys():
-            if name in n:
-                if cname:
-                    return None  # ambiguous!!
-                cname = n
-        if cname:
-            return udi[cname]
-        else:
-            return None
+        for user in self._userlist:
+            if user.name == name:
+                return user
 
     ####
     # History
@@ -904,9 +877,9 @@ class Room:
         @param msg: message
         """
         self._history.append(msg)
-        if len(self._history) > self.mgr._maxHistoryLength:
-            rest = self._history[:-self.mgr._maxHistoryLength]
-            self._history = self._history[-self.mgr._maxHistoryLength:]
+        if len(self._history) > self._mgr._maxHistoryLength:
+            rest = self._history[:-self._mgr._maxHistoryLength]
+            self._history = self._history[-self._mgr._maxHistoryLength:]
             for msg in rest:
                 msg.detach()
 

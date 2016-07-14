@@ -24,177 +24,6 @@ import ch
 
 
 ################################################################
-# ANON PM class
-################################################################
-# noinspection PyProtectedMember,PyUnusedLocal,PyPep8Naming
-class _ANON_PM_OBJECT:
-    """Manages connection with Chatango anon PM."""
-
-    def __init__(self, mgr, name):
-        self._connected = False
-        self._mgr = mgr
-        self._wlock = False
-        self._firstCommand = True
-        self._wbuf = b""
-        self._wlockbuf = b""
-        self._rbuf = b""
-        self._pingTask = None
-        self._name = name
-
-    def _auth(self):
-        self._sendCommand("mhs", "mini", "unknown", "%s" % self._name)
-        self._setWriteLock(True)
-        return True
-
-    def disconnect(self):
-        """Disconnect the bot from PM"""
-        self._disconnect()
-        self._callEvent("onAnonPMDisconnect", ch.User(self._name))
-
-    def _disconnect(self):
-        self._connected = False
-        self._sock.close()
-        self._sock = None
-
-    def ping(self):
-        """send a ping"""
-        self._sendCommand("")
-        self._callEvent("onPMPing")
-
-    def message(self, user, msg):
-        """send a pm to a user"""
-        if msg is not None:
-            self._sendCommand("msg", user.name, msg)
-
-    ####
-    # Feed
-    ####
-    def _feed(self, data):
-        """
-        Feed data to the connection.
-
-        @type data: bytes
-        @param data: data to be fed
-        """
-        *foods, self._rbuf = (self._rbuf + data.decode('utf-8', errors="replace")).split("\x00")
-        for food in foods:
-            food = food.rstrip("\r\n")
-            if food:
-                self._process(food)
-
-    def _process(self, data):
-        """
-        Process a command string.
-
-        @type data: str
-        @param data: the command string
-        """
-        self._callEvent("onRaw", data)
-        data = data.split(":")
-        cmd, args = data[0], data[1:]
-        func = "_rcmd_" + cmd
-        if hasattr(self, func):
-            getattr(self, func)(args)
-        else:
-            if ch.debug:
-                print("[unknown] data: " + str(data))
-
-    @property
-    def mgr(self):
-        return self._mgr
-
-    ####
-    # Received Commands
-    ####
-
-    def _rcmd_mhs(self, args):
-        """
-        note to future maintainers
-
-        args[1] is ether "online" or "offline"
-        """
-        self._connected = True
-        self._setWriteLock(False)
-
-    def _rcmd_msg(self, args):
-        user = ch.User(args[0])
-        body = ch._strip_html(":".join(args[5:]))
-        self._callEvent("onPMMessage", user, body)
-
-    ####
-    # Util
-    ####
-    def _callEvent(self, evt, *args, **kw):
-        getattr(self.mgr, evt)(self, *args, **kw)
-        self.mgr.onEventCalled(self, evt, *args, **kw)
-
-    def _write(self, data):
-        if self._wlock:
-            self._wlockbuf += data
-        else:
-            self.mgr._write(self, data)
-
-    def _setWriteLock(self, lock):
-        self._wlock = lock
-        if self._wlock is False:
-            self._write(self._wlockbuf)
-            self._wlockbuf = b""
-
-    def _sendCommand(self, *args):
-        """
-        Send a command.
-
-        @type args: [str, str, ...]
-        @param args: command and list of arguments
-        """
-        if self._firstCommand:
-            terminator = b"\x00"
-            self._firstCommand = False
-        else:
-            terminator = b"\r\n\x00"
-        self._write(":".join(args).encode() + terminator)
-
-
-# noinspection PyProtectedMember,PyPep8Naming
-class ANON_PM:
-    """Comparable wrapper for anon Chatango PM"""
-
-    ####
-    # Init
-    ####
-    def __init__(self, mgr):
-        self._mgr = mgr
-        self._wlock = False
-        self._firstCommand = True
-        self._persons = dict()
-        self._wlockbuf = b""
-        self._pingTask = None
-
-    ####
-    # Connections
-    ####
-    def _connect(self, name):
-        self._persons[name] = _ANON_PM_OBJECT(self._mgr, name)
-        sock = socket.socket()
-        sock.connect((self._mgr._anonPMHost, self._mgr._PMPort))
-        sock.setblocking(False)
-        self._persons[name]._sock = sock
-        if not self._persons[name]._auth():
-            return
-        self._persons[name]._pingTask = self._mgr.setInterval(self._mgr._pingDelay, self._persons[name].ping)
-        self._persons[name]._connected = True
-
-    def message(self, user, msg):
-        """send a pm to a user"""
-        if user.name not in self._persons:
-            self._connect(user.name)
-        self._persons[user.name].message(user, msg)
-
-    def getConnections(self):
-        return list(self._persons.values())
-
-
-################################################################
 # PM class
 ################################################################
 # noinspection PyProtectedMember,PyUnusedLocal,PyBroadException
@@ -218,6 +47,8 @@ class PM:
         self._wlockbuf = b""
         self._rbuf = ""
         self._pingTask = None
+        self._write = self._writeUnlocked
+        self._sendCommand = self._firstSendCommand
         self._connect()
 
     ####
@@ -227,12 +58,10 @@ class PM:
         self._wbuf = b""
         self._sock = socket.socket()
         self._sock.connect((self._mgr._PMHost, self._mgr._PMPort))
-        self._sock.setblocking(False)
-        self._firstCommand = True
-        if not self._auth():
-            return
-        self._pingTask = self.mgr.setInterval(self._mgr._pingDelay, self.ping)
-        self._connected = True
+        self._sendCommand = self._firstSendCommand
+        if self._auth():
+            self._pingTask = self.mgr.setInterval(self._mgr._pingDelay, self.ping)
+            self._connected = True
 
     def _getAuth(self, name, password):
         """
@@ -285,6 +114,7 @@ class PM:
 
     def _disconnect(self):
         self._connected = False
+        self._pingTask.cancel()
         self._sock.close()
         self._sock = None
 
@@ -336,6 +166,10 @@ class PM:
     def blocklist(self):
         return self._blocklist
 
+    @property
+    def connected(self):
+        return self._connected
+
     ####
     # Received Commands
     ####
@@ -347,8 +181,8 @@ class PM:
 
     def _rcmd_wl(self, args):
         self._contacts = set()
-        for i in range(len(args) // 4):
-            name, last_on, is_on, idle = args[i * 4: i * 4 + 4]
+        for i in range(0, len(args), 4):
+            name, last_on, is_on, idle = args[i: i + 4]
             user = ch.User(name)
             if last_on == "None":
                 pass  # in case chatango gives a "None" as data argument
@@ -357,7 +191,7 @@ class PM:
             elif idle == '0':
                 self._status[user] = [int(last_on), True, 0]
             else:
-                self._status[user] = [int(last_on), True, time.time() - int(idle) * 60]
+                self._status[user] = [int(last_on), True, time.time() - (int(idle) * 60)]
             self._contacts.add(user)
         self._callEvent("onPMContactlistReceive")
 
@@ -382,13 +216,15 @@ class PM:
             last_on = self._status[user][0]
         else:
             last_on = 0
-        if args[1] == '0':
-            idle = 0
-        else:
-            idle = time.time() - int(args[1]) * 60
         if args[2] == "online":
+            if args[1] == '0':
+                idle = 0
+            else:
+                idle = time.time() - int(args[1]) * 60
             is_on = True
         else:
+            last_on = args[1]
+            idle = 0
             is_on = False
         self._status[user] = [last_on, is_on, idle]
 
@@ -498,31 +334,27 @@ class PM:
         getattr(self.mgr, evt)(self, *args, **kw)
         self.mgr.onEventCalled(self, evt, *args, **kw)
 
-    def _write(self, data):
-        if self._wlock:
-            self._wlockbuf += data
-        else:
-            self.mgr._write(self, data)
+    def _writeLocked(self, data):
+        self._wlockbuf += data
+
+    def _writeUnlocked(self, data):
+        self._mgr._write(self, data)
 
     def _setWriteLock(self, lock):
         self._wlock = lock
         if self._wlock is False:
+            self._write = self._writeUnlocked
             self._write(self._wlockbuf)
             self._wlockbuf = b""
-
-    def _sendCommand(self, *args):
-        """
-    Send a command.
-
-    @type args: [str, str, ...]
-    @param args: command and list of arguments
-    """
-        if self._firstCommand:
-            terminator = b"\x00"
-            self._firstCommand = False
         else:
-            terminator = b"\r\n\x00"
-        self._write(":".join(args).encode() + terminator)
+            self._write = self._writeLocked
+
+    def _firstSendCommand(self, *args):
+        self._write(":".join(args).encode() + b"\x00")
+        self._sendCommand = self._otherSendCommand
+
+    def _otherSendCommand(self, *args):
+        self._write(":".join(args).encode() + b"\r\n\x00")
 
     def getConnections(self):
         return [self]

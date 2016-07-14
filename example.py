@@ -1,6 +1,5 @@
 #!/usr/bin/python
 import ch
-import ch.roommanager
 
 
 class TestBot(ch.roommanager.RoomManager):

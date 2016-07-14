@@ -16,6 +16,7 @@
 ################################################################
 # import asyncio
 import random
+import html
 import re
 
 # import sys
@@ -106,6 +107,25 @@ tsweights = [['5', 75], ['6', 75], ['7', 75], ['8', 75], ['16', 75], ['17', 75],
              ['74', 116], ['75', 116], ['76', 116], ['77', 116], ['78', 116], ['79', 116], ['80', 116], ['81', 116],
              ['82', 116], ['83', 116], ['84', 116]]
 
+wgts = []
+
+maxnum = sum(l[1] for l in tsweights)
+cumfreq = 0
+for nwgt in tsweights:
+    cumfreq += nwgt[1] / maxnum
+    wgts.append((cumfreq, nwgt[0]))
+
+
+# noinspection PyPep8Naming
+def getServerNum(group):
+    group = group.replace("_", "q")
+    group = group.replace("-", "q")
+    lnv = int(group[6:9] or 'rs', 36)
+    num = (int(group[:5], 36) % lnv) / lnv
+    for wgt, s in wgts:
+        if num <= wgt:
+            return s
+
 
 # noinspection PyPep8Naming
 def getServer(group):
@@ -118,27 +138,7 @@ def getServer(group):
       @rtype: str
       @return: the server's hostname
       """
-    try:
-        sn = specials[group]
-    except KeyError:
-        group = group.replace("_", "q")
-        group = group.replace("-", "q")
-        fnv = float(int(group[0:min(5, len(group))], 36))
-        lnv = group[6: (6 + min(3, len(group) - 5))]
-        if lnv:
-            lnv = float(int(lnv, 36))
-            lnv = max(lnv, 1000)
-        else:
-            lnv = 1000
-        num = (fnv % lnv) / lnv
-        maxnum = sum(map(lambda x: x[1], tsweights))
-        cumfreq = 0
-        sn = 0
-        for wgt in tsweights:
-            cumfreq += float(wgt[1]) / maxnum
-            if num <= cumfreq:
-                sn = int(wgt[0])
-                break
+    sn = specials.get(group) or getServerNum(group)
     return "s" + str(sn) + ".chatango.com"
 
 
@@ -174,11 +174,7 @@ def _clean_message(msg):
     msg = re.sub("<n.*?/>", "", msg)
     msg = re.sub("<f.*?>", "", msg)
     msg = _strip_html(msg)
-    msg = msg.replace("&lt;", "<")
-    msg = msg.replace("&gt;", ">")
-    msg = msg.replace("&quot;", "\"")
-    msg = msg.replace("&apos;", "'")
-    msg = msg.replace("&amp;", "&")
+    msg = html.unescape(msg)
     return msg, n, f
 
 
@@ -229,18 +225,15 @@ def _getAnonId(n, ssid):
     if n is None:
         n = "5504"
     try:
-        return "".join(list(
-            map(lambda x: str(x[0] + x[1])[-1], list(zip(
-                list(map(lambda x: int(x), n)),
-                list(map(lambda x: int(x), ssid[4:]))
-            )))
-        ))
+        return "".join("%d" % (int(ssid[i+4])+int(n[i]) % 10) for i in range(4))
     except ValueError:
         return "NNNN"
 
 
 # noinspection PyPep8
-from ch.pm import ANON_PM, PM
+from ch.pm import PM
+# noinspection PyPep8
+from ch.anonpm import ANON_PM
 # noinspection PyPep8
 from ch.room import Room
 # noinspection PyPep8
