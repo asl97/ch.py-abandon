@@ -27,6 +27,12 @@ class User:
     def __getattr__(self, key):
         return getattr(self.user, key)
 
+    def __setattr__(self, key, value):
+        if key == 'user':
+            super().__setattr__('user', value)
+        else:
+            return setattr(self.user, key, value)
+
     def __eq__(self, other):
         return self.user == getattr(other, "user", other)
 
@@ -44,13 +50,16 @@ class User:
 
         self.user = user
 
+        self.update(**kw)
+
+    def update(self, **kw):
         for attr, val in kw.items():
             if val is None:
                 continue
             if hasattr(self, "_h_" + attr):
                 getattr(self, "_h_" + attr)(val)
             else:
-                setattr(user, "_" + attr, val)
+                setattr(self.user, "_" + attr, val)
 
     def _h_ip(self, val):
         self.user._ip = val
