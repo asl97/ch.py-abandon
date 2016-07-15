@@ -152,7 +152,7 @@ class Room:
 
     @property
     def userList(self):
-        if self._mgr._userlistMode == ch.Userlist.Recent:
+        if self._mgr._userlistMode == ch.common.Userlist.Recent:
             ul = (x.user for x in self._history[-self._mgr._userlistMemory:])
         else:
             ul = self._userlist
@@ -587,9 +587,9 @@ class Room:
         if not html:
             msg = msg.replace("<", "&lt;").replace(">", "&gt;")
         if len(msg) > self._mgr._maxLength:
-            if self._mgr._tooBigMessage == ch.BigMessage.Cut:
+            if self._mgr._tooBigMessage == ch.common.BigMessage.Cut:
                 self.message(msg[:self._mgr._maxLength], html=html)
-            elif self._mgr._tooBigMessage == ch.BigMessage.Multiple:
+            elif self._mgr._tooBigMessage == ch.common.BigMessage.Multiple:
                 while len(msg) > 0:
                     sect = msg[:self._mgr._maxLength]
                     msg = msg[self._mgr._maxLength:]

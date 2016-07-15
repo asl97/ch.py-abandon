@@ -19,22 +19,22 @@ class TestBot(ch.roommanager.RoomManager):
         # channel white, default if channel arg isn't pass
         #   ch.Channel.White or "0"
         if message.body.startswith("!a"):
-            room.message("AAAAAAAAAAAAAA", channel=ch.Channel.White)
+            room.message("AAAAAAAAAAAAAA", channel=ch.common.Channel.White)
 
         # channel red
         #  ch.Channel.Red or "256"
         if message.body.startswith("!b"):
-            room.message("BBBBBBBBBBBBBB", channel=ch.Channel.Red)
+            room.message("BBBBBBBBBBBBBB", channel=ch.common.Channel.Red)
 
         # channel blue
         # ch.Channel.Blue or "2048"
         if message.body.startswith("!c"):
-            room.message("CCCCCCCCCCCCCC", channel=ch.Channel.Blue)
+            room.message("CCCCCCCCCCCCCC", channel=ch.common.Channel.Blue)
 
         # channel mod
         # ch.Channel.Mod or Mod = "32768"
         if message.body.startswith("!d"):
-            room.message("DDDDDDDDDDDDDD", channel=ch.Channel.Mod)
+            room.message("DDDDDDDDDDDDDD", channel=ch.common.Channel.Mod)
 
     def onFloodBan(self, room):
         print("You are flood banned in " + room.name)

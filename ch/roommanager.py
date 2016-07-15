@@ -21,7 +21,6 @@ import threading
 import time
 
 import ch
-import ch.anonpm
 
 
 # noinspection PyUnusedLocal
@@ -55,17 +54,17 @@ class RoomManager:
     ####
     _Room = ch.Room
     _PM = ch.PM
-    _ANON_PM = ch.anonpm.ANON_PM
+    _ANON_PM = ch.ANON_PM
     _anonPMHost = "b1.chatango.com"
     _PMHost = "c1.chatango.com"
     _PMPort = 5222
     _TimerResolution = 0.2  # at least x second per tick
     _pingDelay = 20
-    _userlistMode = ch.Userlist.Recent
+    _userlistMode = ch.common.Userlist.Recent
     _userlistUnique = True
     _userlistMemory = 50
     _userlistEventUnique = False
-    _tooBigMessage = ch.BigMessage.Multiple
+    _tooBigMessage = ch.common.BigMessage.Multiple
     _maxLength = 700
     _maxHistoryLength = 150
 

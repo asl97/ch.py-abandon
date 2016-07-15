@@ -70,7 +70,7 @@ class User:
         self.user._puids.add(val)
 
     def _h_perm(self, val):
-        self.user._perms[val[0]] = ch._Perms(val[1])
+        self.user._perms[val[0]] = ch.common.Perm(val[1])
 
     def _h_participant(self, val):
         if val[0] == '1':  # join
