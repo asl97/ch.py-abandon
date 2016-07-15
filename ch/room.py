@@ -316,10 +316,9 @@ class Room:
             self._premium = False
 
     def _rcmd_mods(self, args):
-        modnames = args
         premods = set(self._mods)
         self._mods = dict()
-        for x in args[6].split(";"):
+        for x in args:
             perm = int(x.split(",")[1])
             self._mods[ch.User(name=x.split(",")[0], perm=(self.name, perm))] = perm
         mods = set(self._mods)
