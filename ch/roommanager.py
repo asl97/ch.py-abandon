@@ -25,6 +25,7 @@ import ch
 
 # noinspection PyUnusedLocal
 class DummyConnection:
+    name = "#dummy" # room can't start with '#' on chatango
     def __init__(self):
         self._sock_pair = socket.socketpair()
         self._sock = self._sock_pair[0]
