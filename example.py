@@ -7,7 +7,7 @@ if __debug__:
     warnings.simplefilter("always")
 
 
-class TestBot(ch.roommanager.RoomManager, metaclass=ch.precheck.SignatureCheckerMeta):
+class TestBot(ch.RoomManager, metaclass=ch.precheck.SignatureCheckerMeta):
     def onConnect(self, room):
         print("Connected to " + room.name)
 

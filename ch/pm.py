@@ -28,6 +28,7 @@ import ch
 ################################################################
 class PM:
     """Manages a connection with Chatango PM."""
+    name = '#PM' 
 
     ####
     # Init
@@ -86,6 +87,7 @@ class PM:
             headers = resp.headers
         except:
             return None
+
         for header, value in headers.items():
             if header.lower() == "set-cookie":
                 m = self._auth_re.search(value)
@@ -146,7 +148,11 @@ class PM:
         cmd, args = data[0], data[1:]
         func = "_rcmd_" + cmd
         if hasattr(self, func):
-            getattr(self, func)(args)
+            try:
+                getattr(self, func)(*args)
+            except:
+                print(args)
+                raise
         else:
             if ch.debug:
                 print("[unknown] data: " + str(data))
@@ -165,16 +171,16 @@ class PM:
     ####
     # Received Commands
     ####
-    def _rcmd_OK(self, args):
+    def _rcmd_OK(self):
         self._setWriteLock(False)
         self.sendCommand("wl")
         self.sendCommand("getblock")
         self._callEvent("onPMConnect")
 
-    def _rcmd_wl(self, args):
+    @ch.common.grouper(4)
+    def _rcmd_wl(self, items):
         self._contacts = set()
-        for i in range(0, len(args), 4):
-            name, last_on, is_on, idle = args[i: i + 4]
+        for name, last_on, is_on, idle in items:
             user = ch.User(name)
             if last_on == "None":
                 pass  # in case chatango gives a "None" as data argument
@@ -194,39 +200,39 @@ class PM:
                 continue
             self._blocklist.add(ch.User(name))
 
-    def _rcmd_idleupdate(self, args):
-        user = ch.User(args[0])
+    def _rcmd_idleupdate(self, name, status):
+        user = ch.User(name)
         last_on, is_on, idle = self._status[user]
-        if args[1] == '1':
+        if status == '1':
             self._status[user] = [last_on, is_on, 0]
         else:
             self._status[user] = [last_on, is_on, time.time()]
 
-    def _rcmd_track(self, args):
-        user = ch.User(args[0])
+    def _rcmd_track(self, name, itime, status):
+        user = ch.User(name)
         if user in self._status:
             last_on = self._status[user][0]
         else:
             last_on = 0
-        if args[2] == "online":
-            if args[1] == '0':
+        if status == "online":
+            if itime == '0':
                 idle = 0
             else:
-                idle = time.time() - int(args[1]) * 60
+                idle = time.time() - int(itime) * 60
             is_on = True
         else:
-            last_on = args[1]
+            last_on = itime
             idle = 0
             is_on = False
         self._status[user] = [last_on, is_on, idle]
 
-    def _rcmd_DENIED(self, args):
+    def _rcmd_denied(self):
         self._disconnect()
         self._callEvent("onLoginFail")
 
-    def _rcmd_msg(self, args):
-        user = ch.User(args[0])
-        body = ch.strip_html(":".join(args[5:]))
+    def _rcmd_msg(self, name, _, __, time, ___, *rawmsgs):
+        user = ch.User(name)
+        body = ch.strip_html(":".join(rawmsgs))
         self._callEvent("onPMMessage", user, body)
 
     def _rcmd_msgoff(self, args):
@@ -246,10 +252,10 @@ class PM:
         self._status[user] = [last_on, False, 0]
         self._callEvent("onPMContactOffline", user)
 
-    def _rcmd_kickingoff(self, args):
+    def _rcmd_kickingoff(self):
         self.disconnect()
 
-    def _rcmd_toofast(self, args):
+    def _rcmd_toofast(self):
         self.disconnect()
 
     def _rcmd_unblocked(self, user):

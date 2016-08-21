@@ -14,7 +14,6 @@
 ################################################################
 # Imports
 ################################################################
-import warnings
 import socket
 import time
 import html
@@ -94,19 +93,18 @@ class Room:
             name = "!anon" + ch.getAnonId(n, self.puid)
             self.n = n
             self.user = ch.User(name)
-            self.botname = name
-            self.currentname = name
             self.user.nameColor = n
         # if got name, join room as name and no password
         elif success == "N" and self.mgr.password is None:
             self.sendCommand("blogin", self.mgr.name)
-            self.currentname = self.mgr.name
+            self.user = ch.User("#"+name)
         # if got password but fail to login
         elif success != "M":  # unsuccessful login
             self._callEvent("onLoginFail")
             self.disconnect()
         else:
             self.logged = True
+            self.user = ch.User(name)
 
         self.owner = ch.User(
             name=owner,
@@ -142,7 +140,7 @@ class Room:
         self.connectAmmount += 1
         self._setWriteLock(False)
 
-    def premium(self, unknown, ptime):
+    def _rcmd_premium(self, _, ptime):
         ptime = float(ptime)
         if ptime > time.time():
             self.premium = ptime
@@ -166,7 +164,7 @@ class Room:
             self._callEvent("onModRemove", user)
         self._callEvent("onModChange")
 
-    def _rcmd_b(self, mtime, name, anon_name, puid, mid, i, ip, channel, unknown, *rawmsgs):
+    def _rcmd_b(self, mtime, name, anon_name, puid, mid, i, ip, channel, _, *rawmsgs):
         mtime = float(mtime)
         rawmsg = ":".join(rawmsgs)
         msg, n, f = ch.clean_message(rawmsg)
@@ -197,6 +195,7 @@ class Room:
             body=msg,
             raw=rawmsg,
             ip=ip,
+            i=i,
             channel=channel,
             nameColor=nameColor,
             fontColor=fontColor,
@@ -216,7 +215,7 @@ class Room:
             self._addHistory(msg)
             self._callEvent("onMessage", msg.user, msg)
 
-    def _rcmd_i(self, mtime, name, anon_name, puid, mid, i, ip, channel, unknown, *rawmsgs):
+    def _rcmd_i(self, mtime, name, anon_name, puid, mid, i, ip, channel, _, *rawmsgs):
         mtime = float(mtime)
         rawmsg = ":".join(rawmsgs)
         msg, n, f = ch.clean_message(rawmsg)
@@ -245,6 +244,7 @@ class Room:
             body=msg,
             raw=rawmsg,
             ip=ip,
+            i=i,
             channel=channel,
             nameColor=nameColor,
             fontColor=fontColor,
@@ -273,13 +273,12 @@ class Room:
         self.participant_lock = False
         for participant in self.participant_queue:
             self._rcmd_participant(*participant)
-        self._callEvent('onGpart')
         self._participant_queue = list()
         self.sendCommand("g_participants", "stop")
 
     def _rcmd_participant(self, status, sid, puid, name, anon_name, unknown, ctime):
         if self.participant_lock:
-            self.participant_queue.append(status, sid, puid, name, anon_name, unknown, ctime)
+            self.participant_queue.append((status, sid, puid, name, anon_name, unknown, ctime))
             return
 
         if name == "None":
@@ -592,8 +591,8 @@ class Room:
         @type msg: str
         @param msg: message
 
-        @type html: bool
-        @param html: interpret message as html
+        @type escape_html: bool
+        @param escape_html: interpret message as html
 
         @type channel: str
         @param channel: channel mode

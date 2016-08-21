@@ -76,6 +76,7 @@ class DummyConnection:
         self.sock_pair = socket.socketpair()
         self.sock = self.sock_pair[0]
 
+    # noinspection PyUnusedLocal
     def recv(self, num):
         return self.sock_pair[0].recv(1)
 
@@ -115,3 +116,12 @@ def stop_on_error(func):
             cls.stop()
             raise
     return internal
+
+
+def grouper(number):
+    def decorator(func):
+        @functools.wraps(func)
+        def internal(cls, *args):
+            func(cls, zip(*([iter(args)]*number)))
+        return internal
+    return decorator
