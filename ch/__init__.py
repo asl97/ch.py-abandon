@@ -25,7 +25,7 @@ import ch.common
 ################################################################
 # Debug stuff
 ################################################################
-debug = False
+debug = __debug__
 
 ################################################################
 # Tagserver stuff
@@ -83,7 +83,7 @@ def getServer(group):
 ################################################################
 # Uid
 ################################################################
-def _genUid():
+def genUid():
     """
   generate a uid
   """
@@ -93,7 +93,7 @@ def _genUid():
 ################################################################
 # Message stuff
 ################################################################
-def _clean_message(msg):
+def clean_message(msg):
     """
   Clean a message and return the message, n tag and f tag.
 
@@ -111,12 +111,12 @@ def _clean_message(msg):
         f = f.group(1)
     msg = re.sub("<n.*?/>", "", msg)
     msg = re.sub("<f.*?>", "", msg)
-    msg = _strip_html(msg)
+    msg = strip_html(msg)
     msg = html.unescape(msg)
     return msg, n, f
 
 
-def _strip_html(msg):
+def strip_html(msg):
     """Strip HTML."""
     li = msg.split("<")
     if len(li) == 1:
@@ -132,14 +132,14 @@ def _strip_html(msg):
         return "".join(ret)
 
 
-def _parseNameColor(n):
+def parseNameColor(n):
     """This just returns its argument, should return the name color."""
     # probably is already the name
     return n
 
 
 # noinspection PyBroadException
-def _parseFont(f):
+def parseFont(f):
     """Parses the contents of a f tag and returns color, face and size."""
     # ' xSZCOL="FONT"'
     try:  # TODO: remove quick hack
@@ -158,13 +158,15 @@ def _parseFont(f):
 ################################################################
 # Anon id
 ################################################################
-def _getAnonId(n, ssid):
+def getAnonId(n, puid):
     """Gets the anon's id."""
     if n is None:
         n = "5504"
     try:
-        return "".join("%d" % (int(ssid[i+4])+int(n[i]) % 10) for i in range(4))
+        return "".join("%d" % ((int(puid[i+4])+int(n[i])) % 10) for i in range(4))
     except ValueError:
+        return "NNNN"
+    except IndexError:
         return "NNNN"
 
 

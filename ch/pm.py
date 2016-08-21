@@ -26,7 +26,6 @@ import ch
 ################################################################
 # PM class
 ################################################################
-# noinspection PyProtectedMember,PyUnusedLocal,PyBroadException
 class PM:
     """Manages a connection with Chatango PM."""
 
@@ -35,8 +34,8 @@ class PM:
     ####
     def __init__(self, mgr):
         self._auth_re = re.compile(r"auth\.chatango\.com ?= ?([^;]*)", re.IGNORECASE)
-        self._connected = False
-        self._mgr = mgr
+        self.connected = False
+        self.mgr = mgr
         self._auid = None
         self._blocklist = set()
         self._contacts = set()
@@ -46,9 +45,10 @@ class PM:
         self._wbuf = b""
         self._wlockbuf = b""
         self._rbuf = ""
-        self._pingTask = None
+        self.sock = None
+        self.pingTask = None
         self._write = self._writeUnlocked
-        self._sendCommand = self._firstSendCommand
+        self.sendCommand = self._firstSendCommand
         self._connect()
 
     ####
@@ -56,12 +56,12 @@ class PM:
     ####
     def _connect(self):
         self._wbuf = b""
-        self._sock = socket.socket()
-        self._sock.connect((self._mgr._PMHost, self._mgr._PMPort))
-        self._sendCommand = self._firstSendCommand
-        if self._auth():
-            self._pingTask = self.mgr.setInterval(self._mgr._pingDelay, self.ping)
-            self._connected = True
+        self.sock = socket.socket()
+        self.sock.connect((self.mgr.PMHost, self.mgr.PMPort))
+        self.sendCommand = self._firstSendCommand
+        if self.auth():
+            self.pingTask = self.mgr.setInterval(self.mgr.pingDelay, self.ping)
+            self.connected = True
 
     def _getAuth(self, name, password):
         """
@@ -96,14 +96,14 @@ class PM:
                     return auth
         return None
 
-    def _auth(self):
-        self._auid = self._getAuth(self._mgr.name, self._mgr.password)
+    def auth(self):
+        self._auid = self._getAuth(self.mgr.name, self.mgr.password)
         if self._auid is None:
-            self._sock.close()
+            self.sock.close()
             self._callEvent("onLoginFail")
-            self._sock = None
+            self.sock = None
             return False
-        self._sendCommand("tlogin", self._auid, "2")
+        self.sendCommand("tlogin", self._auid, "2")
         self._setWriteLock(True)
         return True
 
@@ -113,15 +113,15 @@ class PM:
         self._callEvent("onPMDisconnect")
 
     def _disconnect(self):
-        self._connected = False
-        self._pingTask.cancel()
-        self._sock.close()
-        self._sock = None
+        self.connected = False
+        self.pingTask.cancel()
+        self.sock.close()
+        self.sock = None
 
     ####
     # Feed
     ####
-    def _feed(self, data):
+    def feed(self, data):
         """
         Feed data to the connection.
 
@@ -155,10 +155,6 @@ class PM:
     # Properties
     ####
     @property
-    def mgr(self):
-        return self._mgr
-
-    @property
     def contacts(self):
         return self._contacts
 
@@ -166,17 +162,13 @@ class PM:
     def blocklist(self):
         return self._blocklist
 
-    @property
-    def connected(self):
-        return self._connected
-
     ####
     # Received Commands
     ####
     def _rcmd_OK(self, args):
         self._setWriteLock(False)
-        self._sendCommand("wl")
-        self._sendCommand("getblock")
+        self.sendCommand("wl")
+        self.sendCommand("getblock")
         self._callEvent("onPMConnect")
 
     def _rcmd_wl(self, args):
@@ -234,12 +226,12 @@ class PM:
 
     def _rcmd_msg(self, args):
         user = ch.User(args[0])
-        body = ch._strip_html(":".join(args[5:]))
+        body = ch.strip_html(":".join(args[5:]))
         self._callEvent("onPMMessage", user, body)
 
     def _rcmd_msgoff(self, args):
         user = ch.User(args[0])
-        body = ch._strip_html(":".join(args[5:]))
+        body = ch.strip_html(":".join(args[5:]))
         self._callEvent("onPMOfflineMessage", user, body)
 
     def _rcmd_wlonline(self, args):
@@ -271,43 +263,43 @@ class PM:
     ####
     def ping(self):
         """send a ping"""
-        self._sendCommand("")
+        self.sendCommand("")
         self._callEvent("onPMPing")
 
     def message(self, user, msg):
         """send a pm to a user"""
         if msg is not None:
-            self._sendCommand("msg", user.name, msg)
+            self.sendCommand("msg", user.name, msg)
 
     def addContact(self, user):
         """add contact"""
         if user not in self._contacts:
-            self._sendCommand("wladd", user.name)
+            self.sendCommand("wladd", user.name)
             self._contacts.add(user)
             self._callEvent("onPMContactAdd", user)
 
     def removeContact(self, user):
         """remove contact"""
         if user in self._contacts:
-            self._sendCommand("wldelete", user.name)
+            self.sendCommand("wldelete", user.name)
             self._contacts.remove(user)
             self._callEvent("onPMContactRemove", user)
 
     def block(self, user):
         """block a person"""
         if user not in self._blocklist:
-            self._sendCommand("block", user.name, user.name, "S")
+            self.sendCommand("block", user.name, user.name, "S")
             self._blocklist.add(user)
             self._callEvent("onPMBlock", user)
 
     def unblock(self, user):
         """unblock a person"""
         if user in self._blocklist:
-            self._sendCommand("unblock", user.name)
+            self.sendCommand("unblock", user.name)
 
     def track(self, user):
         """get and store status of person for future use"""
-        self._sendCommand("track", user.name)
+        self.sendCommand("track", user.name)
 
     def checkOnline(self, user):
         """return True if online, False if offline, None if unknown"""
@@ -338,7 +330,7 @@ class PM:
         self._wlockbuf += data
 
     def _writeUnlocked(self, data):
-        self._mgr._write(self, data)
+        self.mgr.write(self, data)
 
     def _setWriteLock(self, lock):
         self._wlock = lock
@@ -351,7 +343,7 @@ class PM:
 
     def _firstSendCommand(self, *args):
         self._write(":".join(args).encode() + b"\x00")
-        self._sendCommand = self._otherSendCommand
+        self.sendCommand = self._otherSendCommand
 
     def _otherSendCommand(self, *args):
         self._write(":".join(args).encode() + b"\r\n\x00")

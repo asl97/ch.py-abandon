@@ -1,14 +1,27 @@
 import enum
-
+import functools
 
 ################################################################
 # Constants
 ################################################################
-class Channel:
+import socket
+
+
+class StrEnum(str, enum.Enum):
+    """Enum where members are also (and must be) strs"""
+
+
+class Channel(StrEnum):
     White = "0"
     Red = "256"
     Blue = "2048"
     Mod = "32768"
+
+
+class Nlp(enum.IntEnum):
+    Spam = 2
+    Short = 8
+    Nonsense = 16
 
 
 class Userlist(enum.IntEnum):
@@ -54,3 +67,51 @@ class Perm(int):
         i = int.__new__(cls, value)
         i.perm = value
         return i
+
+
+class DummyConnection:
+    name = "#dummy"  # room can't start with '#' on chatango
+
+    def __init__(self):
+        self.sock_pair = socket.socketpair()
+        self.sock = self.sock_pair[0]
+
+    def recv(self, num):
+        return self.sock_pair[0].recv(1)
+
+    def notify(self):
+        self.sock_pair[1].sendall(b'x')
+
+    def feed(self, data):
+        pass
+
+    def disconnect(self):
+        pass
+
+
+def resplit(new, old=":"):
+    def decorator(func):
+        @functools.wraps(func)
+        def internal(cls, *args):
+            func(cls, *old.join(args).split(new))
+        return internal
+    return decorator
+
+
+def check_not_empty(func):
+    @functools.wraps(func)
+    def internal(cls, *args):
+        if any(args):
+            func(cls, *args)
+    return internal
+
+
+def stop_on_error(func):
+    @functools.wraps(func)
+    def internal(cls, *args):
+        try:
+            func(cls, *args)
+        except:
+            cls.stop()
+            raise
+    return internal

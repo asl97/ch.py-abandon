@@ -18,70 +18,26 @@ import ch
 
 
 ################################################################
-# User class
+# User factory
 ################################################################
-# noinspection PyProtectedMember,PyProtectedMember,PyUnusedLocal
-class User:
-    _users = dict()
+_users = dict()
 
-    def __getattr__(self, key):
-        return getattr(self.user, key)
 
-    def __setattr__(self, key, value):
-        if key == 'user':
-            super().__setattr__('user', value)
-        else:
-            return setattr(self.user, key, value)
+def User(name, **kw):
+    if not name:
+        return
 
-    def __eq__(self, other):
-        return self.user == getattr(other, "user", other)
+    lname = name.lower()
 
-    def __hash__(self):
-        return hash(self.user)
+    user = _users.get(lname)
+    if not user:
+        user = _User(name)
+        _users[lname] = user
 
-    def __init__(self, name, *args, **kw):
-        if not name:
-            return
-        name = name.lower()
-        user = self._users.get(name)
-        if not user:
-            user = _User(name)
-            self._users[name] = user
+    if kw:
+        user.update(**kw)
 
-        self.user = user
-
-        self.update(**kw)
-
-    def update(self, **kw):
-        for attr, val in kw.items():
-            if val is None:
-                continue
-            if hasattr(self, "_h_" + attr):
-                getattr(self, "_h_" + attr)(val)
-            else:
-                setattr(self.user, "_" + attr, val)
-
-    def _h_ip(self, val):
-        self.user._ip = val
-        self.user._ips.add(val)
-
-    def _h_puid(self, val):
-        self.user._puid = val
-        self.user._puids.add(val)
-
-    def _h_perm(self, val):
-        self.user._perms[val[0]] = ch.common.Perm(val[1])
-
-    def _h_participant(self, val):
-        if val[0] == '1':  # join
-            if val[1] not in self.user._sids:
-                self.user._sids[val[1]] = set()
-            self.user._sids[val[1]].add(val[2])
-        elif val[0] == '0':  # leave
-            if val[1] in self.user._sids:
-                self.user._sids[val[1]].remove(val[2])
-                if not self.user._sids[val[1]]:
-                    del self.user._sids[val[1]]
+    return user
 
 
 class _User:
@@ -91,86 +47,80 @@ class _User:
     # Init
     ####
     def __init__(self, name):
-        self._name = name.lower()
-        self._puid = None
-        self._puids = set()
-        self._ip = None
-        self._ips = set()
-        self._perms = dict()
-        self._room = None
-        self._sids = dict()
-        self._msgs = list()
-        self._nameColor = "000"
-        self._fontSize = 12
-        self._fontFace = "0"
-        self._fontColor = "000"
-        self._mbg = False
-        self._mrec = False
+        self.name = name
+        self.puid = None
+        self.puids = set()
+        self.ip = None
+        self.ips = set()
+        self.perms = dict()
+        self.room = None
+        self.sids = dict()
+        self.msgs = list()
+        self.nameColor = "000"
+        self.fontSize = 12
+        self.fontFace = "0"
+        self.fontColor = "000"
+        self.mbg = False
+        self.mrec = False
+
+    ####
+    # Update Handler
+    ####
+    def update(self, **kw):
+        for attr, val in kw.items():
+            if val is None:
+                continue
+            if hasattr(self, "_h_" + attr):
+                getattr(self, "_h_" + attr)(val)
+            else:
+                setattr(self, attr, val)
+
+    def _h_ip(self, val):
+        self.ip = val
+        self.ips.add(val)
+
+    def _h_puid(self, val):
+        self.puid = val
+        self.puids.add(val)
+
+    def _h_perm(self, val):
+        self.perms[val[0]] = ch.common.Perm(val[1])
+
+    def _h_participant(self, val):
+        if val[0] == '1':  # join
+            if val[1] not in self.sids:
+                self.sids[val[1]] = set()
+            self.sids[val[1]].add(val[2])
+        elif val[0] == '0':  # leave
+            if val[1] in self.sids:
+                self.sids[val[1]].remove(val[2])
+                if not self.sids[val[1]]:
+                    del self.sids[val[1]]
 
     ####
     # Properties
     ####
     @property
-    def name(self):
-        return self._name
-
-    @property
-    def puid(self):
-        return self._puid
-
-    @property
-    def puids(self):
-        return self._puids
-
-    @property
-    def ip(self):
-        return self._ip
-
-    @property
-    def ips(self):
-        return self._ips
-
-    @property
-    def room(self):
-        return self._room
-
-    @property
     def sessionids(self):
-        return set.union(*self._sids.values())
+        return set.union(*self.sids.values())
 
     @property
     def rooms(self):
-        return list(self._sids.keys())
+        return list(self.sids.keys())
 
     @property
     def roomNames(self):
-        return [room.name for room in self._sids.keys()]
-
-    @property
-    def fontColor(self):
-        return self._fontColor
-
-    @property
-    def fontFace(self):
-        return self._fontFace
-
-    @property
-    def fontSize(self):
-        return self._fontSize
-
-    @property
-    def nameColor(self):
-        return self._nameColor
+        return [room.name for room in self.sids.keys()]
 
     ####
     # Util
     ####
 
     def getPerm(self, room):
-        return self._perms[room].perm
+        return self.perms[room].perm
 
     def getPerms(self, room):
-        return self._perms[room].perms
+        return self.perms[room].perms
 
     ####
     # Repr

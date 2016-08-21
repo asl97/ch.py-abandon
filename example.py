@@ -1,8 +1,13 @@
 #!/usr/bin/python
 import ch
+import ch.precheck
+
+if __debug__:
+    import warnings
+    warnings.simplefilter("always")
 
 
-class TestBot(ch.roommanager.RoomManager):
+class TestBot(ch.roommanager.RoomManager, metaclass=ch.precheck.SignatureCheckerMeta):
     def onConnect(self, room):
         print("Connected to " + room.name)
 
@@ -13,8 +18,7 @@ class TestBot(ch.roommanager.RoomManager):
         print("Disconnected from " + room.name)
 
     def onMessage(self, room, user, message):
-        # Use with PsyfrBot framework? :3
-        self.safePrint(user.name + ': ' + message.body)
+        print(user.name + ': ' + message.body)
 
         # channel white, default if channel arg isn't pass
         #   ch.Channel.White or "0"
@@ -36,13 +40,12 @@ class TestBot(ch.roommanager.RoomManager):
         if message.body.startswith("!d"):
             room.message("DDDDDDDDDDDDDD", channel=ch.common.Channel.Mod)
 
-    def onFloodBan(self, room):
+    def onFloodBan(self, room, seconds):
         print("You are flood banned in " + room.name)
 
     def onPMMessage(self, pm, user, body):
-        self.safePrint('PM: ' + user.name + ': ' + body)
+        print('PM: ' + user.name + ': ' + body)
         pm.message(user, body)  # echo
-
 
 if __name__ == "__main__":
     TestBot.easy_start()

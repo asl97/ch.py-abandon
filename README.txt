@@ -1,8 +1,41 @@
+This branch is currently in the middle of a rewrite and consider as totally broken.
+
+Use at your own risk.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+____
+
 ch.py
 =====
 Distributed under the terms of the GNU AGPL 3
 
 Backward compatible is not GUARANTEE, anything and everything can break at anytime.
+
+Run using -O to disable debugging. Warning, data dump and run time type checking wouldn't be available.
 
 NOTE: there will be NO python2 support, it been more than 5 years since it was release.
 

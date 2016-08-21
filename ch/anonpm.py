@@ -101,7 +101,7 @@ class _ANON_PM_OBJECT:
 
     def _rcmd_msg(self, args):
         user = ch.User(args[0])
-        body = ch._strip_html(":".join(args[5:]))
+        body = ch.strip_html(":".join(args[5:]))
         self._callEvent("onPMMessage", user, body)
 
     ####
@@ -115,7 +115,7 @@ class _ANON_PM_OBJECT:
         if self._wlock:
             self._wlockbuf += data
         else:
-            self.mgr._write(self, data)
+            self.mgr.write(self, data)
 
     def _setWriteLock(self, lock):
         self._wlock = lock
