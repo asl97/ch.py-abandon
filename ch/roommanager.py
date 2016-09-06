@@ -481,8 +481,6 @@ class RoomManager(BotCallback):
     ####
     Room = ch.Room
     PM = ch.PM
-    ANON_PM = ch.ANON_PM
-    anonPMHost = "b1.chatango.com"
     PMHost = "c1.chatango.com"
     PMPort = 5222
     TimerResolution = 0.2  # at least x second per tick

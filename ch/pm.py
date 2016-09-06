@@ -230,25 +230,25 @@ class PM:
         self._disconnect()
         self._callEvent("onLoginFail")
 
-    def _rcmd_msg(self, name, _, __, time, ___, *rawmsgs):
+    def _rcmd_msg(self, name, cid, unknown, mtime, pro, *rawmsgs):
         user = ch.User(name)
         body = ch.strip_html(":".join(rawmsgs))
         self._callEvent("onPMMessage", user, body)
 
-    def _rcmd_msgoff(self, args):
-        user = ch.User(args[0])
-        body = ch.strip_html(":".join(args[5:]))
+    def _rcmd_msgoff(self, name, cid, unknown, mtime, pro, *rawmsgs):
+        user = ch.User(name)
+        body = ch.strip_html(":".join(rawmsgs))
         self._callEvent("onPMOfflineMessage", user, body)
 
-    def _rcmd_wlonline(self, args):
-        user = ch.User(args[0])
-        last_on = float(args[1])
+    def _rcmd_wlonline(self, name, ltime):
+        user = ch.User(name)
+        last_on = float(ltime)
         self._status[user] = [last_on, True, last_on]
         self._callEvent("onPMContactOnline", user)
 
-    def _rcmd_wloffline(self, args):
-        user = ch.User(args[0])
-        last_on = float(args[1])
+    def _rcmd_wloffline(self, name, ltime):
+        user = ch.User(name)
+        last_on = float(ltime)
         self._status[user] = [last_on, False, 0]
         self._callEvent("onPMContactOffline", user)
 

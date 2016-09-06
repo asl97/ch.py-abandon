@@ -274,7 +274,6 @@ class Room:
         for participant in self.participant_queue:
             self._rcmd_participant(*participant)
         self._participant_queue = list()
-        self.sendCommand("g_participants", "stop")
 
     def _rcmd_participant(self, status, sid, puid, name, anon_name, unknown, ctime):
         if self.participant_lock:

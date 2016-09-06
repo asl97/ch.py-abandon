@@ -173,8 +173,6 @@ def getAnonId(n, puid):
 # noinspection PyPep8
 from ch.pm import PM
 # noinspection PyPep8
-from ch.anonpm import ANON_PM
-# noinspection PyPep8
 from ch.room import Room
 # noinspection PyPep8
 from ch.roommanager import RoomManager
