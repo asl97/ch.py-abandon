@@ -2,7 +2,7 @@ This branch is currently in the middle of a rewrite and consider as totally brok
 
 Use at your own risk.
 
-consider using https://github.com/asl97/async-ch.py instead once it's available.
+check out the wiki: https://github.com/asl97/ch.py/wiki
 
 
 
